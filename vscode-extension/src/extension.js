@@ -22,6 +22,10 @@ function createDecorations() {
     backgroundColor: "rgba(255, 215, 0, 0.07)",
     overviewRulerColor: "#FFD700",
     overviewRulerLane: vscode.OverviewRulerLane.Left,
+    before: {
+      contentText: " ",
+      width: "6px",
+    },
   });
 
   const executeParam = vscode.window.createTextEditorDecorationType({
@@ -30,6 +34,10 @@ function createDecorations() {
     borderStyle: "solid",
     borderColor: "rgba(255, 215, 0, 0.3)",
     backgroundColor: "rgba(255, 215, 0, 0.03)",
+    before: {
+      contentText: " ",
+      width: "6px",
+    },
   });
 
   const prompt = vscode.window.createTextEditorDecorationType({
@@ -40,6 +48,10 @@ function createDecorations() {
     backgroundColor: "rgba(0, 191, 255, 0.07)",
     overviewRulerColor: "#00BFFF",
     overviewRulerLane: vscode.OverviewRulerLane.Left,
+    before: {
+      contentText: " ",
+      width: "6px",
+    },
   });
 
   const tool = vscode.window.createTextEditorDecorationType({
