@@ -67,7 +67,7 @@ function createDecorations() {
     isWholeLine: true,
     borderWidth: "0 0 0 2px",
     borderStyle: "solid",
-    borderColor: "#50FA7B",
+    borderColor: "#FF79C6",
     before: { contentText: " ", width: "6px" },
   });
 
