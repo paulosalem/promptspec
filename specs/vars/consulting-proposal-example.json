@@ -1,0 +1,16 @@
+{
+  "client_name": "Meridian Health Systems",
+  "client_industry": "healthcare",
+  "engagement_goal": "reduce patient wait times by 40% while improving staff satisfaction",
+  "audience_type": "C-suite executives and board members",
+  "challenges": [
+    "Average ER wait time exceeds 4 hours (industry benchmark: 2.5 hours)",
+    "Staff turnover rate of 28% (vs. 18% industry average)",
+    "Legacy scheduling system with no real-time capacity visibility",
+    "Three recent acquisitions with incompatible operational processes"
+  ],
+  "timeline": "6 months",
+  "budget_range": "$1.5M–$2.5M",
+  "engagement_scope": "transformation",
+  "focus_areas": "patient intake, triage, scheduling, and discharge"
+}

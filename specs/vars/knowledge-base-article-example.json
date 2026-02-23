@@ -1,0 +1,12 @@
+{
+  "topic": "Event-Driven Architecture with Apache Kafka",
+  "include_comparison": true,
+  "alternatives": [
+    "RabbitMQ",
+    "Apache Pulsar",
+    "AWS Kinesis",
+    "Redis Streams"
+  ],
+  "include_migration_guide": true,
+  "migration_from": "a monolithic REST API with synchronous database calls"
+}

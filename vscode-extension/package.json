@@ -1,0 +1,70 @@
+{
+  "name": "promptspec",
+  "displayName": "PromptSpec Syntax",
+  "description": "Syntax highlighting for PromptSpec specification files (.promptspec.md) — directives, variables, match cases, and more.",
+  "version": "0.1.0",
+  "publisher": "prompting-adventures",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulosalem/prompting-adventures"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Themes"
+  ],
+  "keywords": [
+    "prompt",
+    "prompt engineering",
+    "llm",
+    "markdown",
+    "template",
+    "promptspec"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "promptspec",
+        "aliases": [
+          "PromptSpec",
+          "Prompt Specification"
+        ],
+        "extensions": [
+          ".promptspec.md"
+        ],
+        "firstLine": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract)\\b",
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "promptspec",
+        "scopeName": "text.markdown.promptspec",
+        "path": "./syntaxes/promptspec.tmLanguage.json",
+        "embeddedLanguages": {
+          "meta.embedded.block.markdown": "markdown"
+        }
+      }
+    ],
+    "themes": [
+      {
+        "label": "PromptSpec Dark",
+        "uiTheme": "vs-dark",
+        "path": "./themes/promptspec-dark.json"
+      },
+      {
+        "label": "PromptSpec Light",
+        "uiTheme": "vs",
+        "path": "./themes/promptspec-light.json"
+      }
+    ],
+    "configurationDefaults": {
+      "files.associations": {
+        "*.promptspec.md": "promptspec"
+      }
+    }
+  }
+}

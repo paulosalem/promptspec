@@ -1,0 +1,249 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "PromptSpec",
+  "scopeName": "text.markdown.promptspec",
+  "fileTypes": ["promptspec.md"],
+  "firstLineMatch": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract)\\b",
+  "patterns": [
+    { "include": "#escaped-at" },
+    { "include": "#note-block" },
+    { "include": "#debug-query" },
+    { "include": "#match-case" },
+    { "include": "#directive-refine" },
+    { "include": "#directive-match" },
+    { "include": "#directive-if" },
+    { "include": "#directive-else" },
+    { "include": "#directive-assert-inline" },
+    { "include": "#directive-with-string" },
+    { "include": "#directive-with-kv" },
+    { "include": "#directive-keyword" },
+    { "include": "#mustache-section" },
+    { "include": "#mustache-variable" },
+    { "include": "#inline-variable-braced" },
+    { "include": "#markdown-code-block" },
+    { "include": "#markdown-heading" },
+    { "include": "#markdown-bold" },
+    { "include": "#markdown-italic" },
+    { "include": "#markdown-inline-code" },
+    { "include": "#markdown-link" },
+    { "include": "#markdown-list" }
+  ],
+  "repository": {
+
+    "escaped-at": {
+      "match": "(@@)(\\w*)",
+      "captures": {
+        "1": { "name": "constant.character.escape.at.promptspec" },
+        "2": { "name": "constant.character.escape.word.promptspec" }
+      }
+    },
+
+    "note-block": {
+      "begin": "^(\\s*)(@note)\\s*$",
+      "end": "^(?!\\1  )(?!\\s*$)",
+      "beginCaptures": {
+        "2": { "name": "comment.block.documentation.directive.promptspec" }
+      },
+      "contentName": "comment.block.documentation.promptspec"
+    },
+
+    "debug-query": {
+      "match": "^(\\s*)(@(?:directives|vars|structure))(\\?)",
+      "captures": {
+        "2": { "name": "keyword.other.debug-query.promptspec" },
+        "3": { "name": "keyword.operator.debug-query.promptspec" }
+      }
+    },
+
+    "match-case": {
+      "match": "^(\\s*)(\"[^\"]*\"|_)(\\s*)(==>)",
+      "captures": {
+        "2": { "name": "string.regexp.match-case.promptspec" },
+        "4": { "name": "keyword.operator.fat-arrow.promptspec" }
+      }
+    },
+
+    "directive-refine": {
+      "match": "^(\\s*)(@refine)(\\s+)(\\S+)(.*)",
+      "captures": {
+        "2": { "name": "keyword.control.import.promptspec" },
+        "4": { "name": "entity.name.filename.promptspec" },
+        "5": { "patterns": [{ "include": "#kv-pair" }] }
+      }
+    },
+
+    "directive-match": {
+      "match": "^(\\s*)(@match)(\\s+)(\\w+)",
+      "captures": {
+        "2": { "name": "keyword.control.switch.promptspec" },
+        "4": { "name": "variable.other.readwrite.promptspec" }
+      }
+    },
+
+    "directive-if": {
+      "match": "^(\\s*)(@if)(\\s+)(\\S.*?)\\s*$",
+      "captures": {
+        "2": { "name": "keyword.control.conditional.promptspec" },
+        "4": { "name": "variable.other.readwrite.promptspec" }
+      }
+    },
+
+    "directive-else": {
+      "match": "^(\\s*)(@else)\\b",
+      "captures": {
+        "2": { "name": "keyword.control.conditional.promptspec" }
+      }
+    },
+
+    "directive-assert-inline": {
+      "match": "^(\\s*)(@assert)((?:\\s+\\w+:\\s*\\S+)*)(\\s+.*)?$",
+      "captures": {
+        "2": { "name": "keyword.control.assert.promptspec" },
+        "3": { "patterns": [{ "include": "#kv-pair" }] },
+        "4": { "name": "string.unquoted.assert-message.promptspec" }
+      }
+    },
+
+    "directive-with-string": {
+      "match": "^(\\s*)(@(?:audience|style|output_format|summarize|compress|extract|generate_examples|assert))(\\s+)(\"[^\"]*\")",
+      "captures": {
+        "2": { "name": "keyword.control.directive.promptspec" },
+        "4": { "name": "string.quoted.double.promptspec" }
+      }
+    },
+
+    "directive-with-kv": {
+      "match": "^(\\s*)(@(?:revise|expand|contract|canon|cohere|compress|extract|summarize|generate_examples|output_format|structural_constraints|audience|style))(\\s+)(.*)",
+      "captures": {
+        "2": { "name": "keyword.control.directive.promptspec" },
+        "4": { "patterns": [{ "include": "#kv-pair" }, { "include": "#quoted-string" }] }
+      }
+    },
+
+    "directive-keyword": {
+      "match": "^(\\s*)(@(?:refine|if|else|match|revise|expand|contract|canon|cohere|audience|style|summarize|compress|extract|generate_examples|output_format|structural_constraints|assert|note))\\b",
+      "captures": {
+        "2": { "name": "keyword.control.directive.promptspec" }
+      }
+    },
+
+    "kv-pair": {
+      "match": "(\\w+)(:)(\\s*)(\"[^\"]*\"|true|false|\\d+|\\w+)",
+      "captures": {
+        "1": { "name": "entity.other.attribute-name.promptspec" },
+        "2": { "name": "punctuation.separator.key-value.promptspec" },
+        "4": {
+          "patterns": [
+            { "include": "#quoted-string" },
+            { "include": "#boolean" },
+            { "include": "#number" },
+            { "match": "\\w+", "name": "support.constant.parameter-value.promptspec" }
+          ]
+        }
+      }
+    },
+
+    "quoted-string": {
+      "match": "\"[^\"]*\"",
+      "name": "string.quoted.double.promptspec"
+    },
+    "boolean": {
+      "match": "\\b(true|false)\\b",
+      "name": "constant.language.boolean.promptspec"
+    },
+    "number": {
+      "match": "\\b\\d+\\b",
+      "name": "constant.numeric.integer.promptspec"
+    },
+
+    "mustache-section": {
+      "match": "(\\{\\{)([#/])(\\w+)(\\}\\})",
+      "captures": {
+        "1": { "name": "punctuation.section.embedded.begin.promptspec" },
+        "2": { "name": "keyword.operator.section.promptspec" },
+        "3": { "name": "entity.name.tag.mustache.promptspec" },
+        "4": { "name": "punctuation.section.embedded.end.promptspec" }
+      }
+    },
+
+    "mustache-variable": {
+      "match": "(\\{\\{)(\\.|\\w+)(\\}\\})",
+      "captures": {
+        "1": { "name": "punctuation.section.embedded.begin.promptspec" },
+        "2": { "name": "variable.other.placeholder.promptspec" },
+        "3": { "name": "punctuation.section.embedded.end.promptspec" }
+      }
+    },
+
+    "inline-variable-braced": {
+      "match": "(@)(\\{)(\\w+)(\\})",
+      "captures": {
+        "1": { "name": "punctuation.section.embedded.begin.promptspec" },
+        "2": { "name": "punctuation.section.embedded.begin.promptspec" },
+        "3": { "name": "variable.other.placeholder.promptspec" },
+        "4": { "name": "punctuation.section.embedded.end.promptspec" }
+      }
+    },
+
+    "markdown-code-block": {
+      "begin": "^(\\s*)(```)(\\w*)",
+      "end": "^(\\s*)(```)",
+      "beginCaptures": {
+        "2": { "name": "punctuation.definition.code.fenced.markdown" },
+        "3": { "name": "entity.name.type.language.markdown" }
+      },
+      "endCaptures": {
+        "2": { "name": "punctuation.definition.code.fenced.markdown" }
+      },
+      "contentName": "markup.raw.block.fenced.markdown"
+    },
+    "markdown-heading": {
+      "match": "^(\\s*)(#{1,6})(\\s+)(.*)$",
+      "captures": {
+        "2": { "name": "punctuation.definition.heading.markdown" },
+        "4": { "name": "markup.heading.promptspec" }
+      }
+    },
+    "markdown-bold": {
+      "match": "(\\*\\*)(.+?)(\\*\\*)",
+      "captures": {
+        "1": { "name": "punctuation.definition.bold.markdown" },
+        "2": { "name": "markup.bold.markdown" },
+        "3": { "name": "punctuation.definition.bold.markdown" }
+      }
+    },
+    "markdown-italic": {
+      "match": "(?<!\\*)(\\*)((?!\\*).+?)(\\*)(?!\\*)",
+      "captures": {
+        "1": { "name": "punctuation.definition.italic.markdown" },
+        "2": { "name": "markup.italic.markdown" },
+        "3": { "name": "punctuation.definition.italic.markdown" }
+      }
+    },
+    "markdown-inline-code": {
+      "match": "(`)(.*?)(`)",
+      "captures": {
+        "1": { "name": "punctuation.definition.raw.markdown" },
+        "2": { "name": "markup.inline.raw.string.markdown" },
+        "3": { "name": "punctuation.definition.raw.markdown" }
+      }
+    },
+    "markdown-link": {
+      "match": "(\\[)([^\\]]*)(\\])(\\()([^)]*)(\\))",
+      "captures": {
+        "1": { "name": "punctuation.definition.link.markdown" },
+        "2": { "name": "string.other.link.title.markdown" },
+        "3": { "name": "punctuation.definition.link.markdown" },
+        "4": { "name": "punctuation.definition.link.markdown" },
+        "5": { "name": "markup.underline.link.markdown" },
+        "6": { "name": "punctuation.definition.link.markdown" }
+      }
+    },
+    "markdown-list": {
+      "match": "^(\\s*)([-*+]|\\d+\\.)(\\s)",
+      "captures": {
+        "2": { "name": "punctuation.definition.list.begin.markdown" }
+      }
+    }
+  }
+}

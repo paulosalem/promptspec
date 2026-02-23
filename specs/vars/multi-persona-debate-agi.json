@@ -1,0 +1,9 @@
+{
+  "proposition": "Artificial general intelligence will be achieved within the next 20 years",
+  "num_perspectives": 4,
+  "synthesis_style": "dialectical",
+  "include_historical_context": true,
+  "include_audience_calibration": true,
+  "audience_type": "technology policy advisors with some ML background but not AI researchers",
+  "num_questions": 5
+}

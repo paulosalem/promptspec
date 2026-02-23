@@ -1,0 +1,27 @@
+{
+  "api_name": "TaskFlow Project Management API",
+  "api_version": "2.1",
+  "api_description": "RESTful API for managing projects, tasks, and team collaboration. Supports real-time webhooks, batch operations, and granular permission controls.",
+  "base_url": "https://api.taskflow.io/v2",
+  "auth_method": "Bearer token (OAuth 2.0) in the `Authorization` header",
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/projects",
+      "description": "Create a new project with optional team assignment and template initialization.",
+      "error_code": "422 Unprocessable Entity"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/{project_id}/tasks",
+      "description": "List all tasks in a project with filtering, sorting, and pagination support.",
+      "error_code": "404 Not Found"
+    },
+    {
+      "method": "PATCH",
+      "path": "/tasks/{task_id}",
+      "description": "Update task fields (status, assignee, priority, due date). Supports partial updates.",
+      "error_code": "409 Conflict"
+    }
+  ]
+}

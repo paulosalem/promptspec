@@ -1,0 +1,6 @@
+{
+  "language": "python",
+  "project_context": "a FastAPI microservice handling payment processing",
+  "is_security_sensitive": true,
+  "review_focus": "error handling, input validation, and API contract correctness"
+}

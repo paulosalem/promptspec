@@ -1,0 +1,17 @@
+{
+  "role_title": "Senior Backend Engineer",
+  "company": "a Series B fintech startup processing 50K transactions/day",
+  "interviewer_profile": "Engineering manager with 8 years of backend experience, conducting the technical screen",
+  "competencies": [
+    "Distributed systems design and operational awareness",
+    "API design and data modeling",
+    "Testing strategy (unit, integration, contract, load)",
+    "Incident response and debugging under pressure"
+  ],
+  "interview_format": "technical_deep_dive",
+  "seniority": "senior",
+  "include_system_design": true,
+  "include_scorecard": true,
+  "tone": "Professional but warm — this is a two-way conversation, not an interrogation. The candidate should feel respected and challenged.",
+  "num_questions": 5
+}

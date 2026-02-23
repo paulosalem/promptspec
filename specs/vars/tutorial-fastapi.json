@@ -1,0 +1,6 @@
+{
+  "topic": "building REST APIs with FastAPI",
+  "audience": "intermediate",
+  "include_exercises": true,
+  "output_format": "Markdown"
+}

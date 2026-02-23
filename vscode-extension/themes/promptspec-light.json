@@ -1,0 +1,287 @@
+{
+  "name": "PromptSpec Light",
+  "type": "light",
+  "colors": {
+    "editor.background": "#FAFAFA",
+    "editor.foreground": "#383A42",
+    "editorLineNumber.foreground": "#9DA5B4",
+    "editorLineNumber.activeForeground": "#636D83",
+    "editor.selectionBackground": "#C5D5FC",
+    "editor.lineHighlightBackground": "#F2F2F2"
+  },
+  "tokenColors": [
+    {
+      "name": "Directive keywords — @refine, @if, @match, etc. (VIVID PURPLE, bold)",
+      "scope": [
+        "keyword.control.import.promptspec",
+        "keyword.control.switch.promptspec",
+        "keyword.control.conditional.promptspec",
+        "keyword.control.directive.promptspec",
+        "keyword.control.assert.promptspec"
+      ],
+      "settings": {
+        "foreground": "#AF00DB",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "@note directive keyword (gray, italic)",
+      "scope": "comment.block.documentation.directive.promptspec",
+      "settings": {
+        "foreground": "#A0A1A7",
+        "fontStyle": "bold italic"
+      }
+    },
+    {
+      "name": "Note block content (gray italic)",
+      "scope": "comment.block.documentation.promptspec",
+      "settings": {
+        "foreground": "#A0A1A7",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Debug queries (BURNT ORANGE, bold italic)",
+      "scope": [
+        "keyword.other.debug-query.promptspec",
+        "keyword.operator.debug-query.promptspec"
+      ],
+      "settings": {
+        "foreground": "#D16900",
+        "fontStyle": "bold italic"
+      }
+    },
+    {
+      "name": "File paths (BLUE, underline)",
+      "scope": "entity.name.filename.promptspec",
+      "settings": {
+        "foreground": "#0070C1",
+        "fontStyle": "underline"
+      }
+    },
+    {
+      "name": "Mustache variables — {{name}} (BRIGHT ORANGE, bold)",
+      "scope": "variable.other.placeholder.promptspec",
+      "settings": {
+        "foreground": "#D16900",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Mustache section names (ORANGE, bold italic)",
+      "scope": "entity.name.tag.mustache.promptspec",
+      "settings": {
+        "foreground": "#D16900",
+        "fontStyle": "bold italic"
+      }
+    },
+    {
+      "name": "Mustache/variable punctuation (PURPLE)",
+      "scope": [
+        "punctuation.section.embedded.begin.promptspec",
+        "punctuation.section.embedded.end.promptspec"
+      ],
+      "settings": {
+        "foreground": "#AF00DB"
+      }
+    },
+    {
+      "name": "Section operators — #, / (RED, bold)",
+      "scope": "keyword.operator.section.promptspec",
+      "settings": {
+        "foreground": "#E51400",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Match target variable and @if condition (ORANGE)",
+      "scope": "variable.other.readwrite.promptspec",
+      "settings": {
+        "foreground": "#D16900"
+      }
+    },
+    {
+      "name": "Match case labels (FOREST GREEN, bold)",
+      "scope": "string.regexp.match-case.promptspec",
+      "settings": {
+        "foreground": "#098658",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Match arrow — ==> (RED, bold)",
+      "scope": "keyword.operator.fat-arrow.promptspec",
+      "settings": {
+        "foreground": "#E51400",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Escaped @@ sequences (dimmed gray)",
+      "scope": [
+        "constant.character.escape.at.promptspec",
+        "constant.character.escape.word.promptspec"
+      ],
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "String arguments (GREEN)",
+      "scope": "string.quoted.double.promptspec",
+      "settings": {
+        "foreground": "#098658"
+      }
+    },
+    {
+      "name": "Assert inline message text (GREEN, italic)",
+      "scope": "string.unquoted.assert-message.promptspec",
+      "settings": {
+        "foreground": "#098658",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Directive parameter names (BLUE, italic)",
+      "scope": "entity.other.attribute-name.promptspec",
+      "settings": {
+        "foreground": "#0070C1",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Key-value separator (dimmed)",
+      "scope": "punctuation.separator.key-value.promptspec",
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "Parameter values (PURPLE)",
+      "scope": "support.constant.parameter-value.promptspec",
+      "settings": {
+        "foreground": "#AF00DB"
+      }
+    },
+    {
+      "name": "Boolean constants (PURPLE, italic)",
+      "scope": "constant.language.boolean.promptspec",
+      "settings": {
+        "foreground": "#AF00DB",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Numeric constants (PURPLE)",
+      "scope": "constant.numeric.integer.promptspec",
+      "settings": {
+        "foreground": "#AF00DB"
+      }
+    },
+    {
+      "name": "Markdown headings (BLUE, bold)",
+      "scope": "markup.heading.promptspec",
+      "settings": {
+        "foreground": "#0070C1",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Markdown heading punctuation (dimmed)",
+      "scope": "punctuation.definition.heading.markdown",
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "Markdown bold (dark, bold)",
+      "scope": "markup.bold.markdown",
+      "settings": {
+        "foreground": "#1A1A1A",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "Markdown italic (dark, italic)",
+      "scope": "markup.italic.markdown",
+      "settings": {
+        "foreground": "#383A42",
+        "fontStyle": "italic"
+      }
+    },
+    {
+      "name": "Bold/italic punctuation (dimmed)",
+      "scope": [
+        "punctuation.definition.bold.markdown",
+        "punctuation.definition.italic.markdown"
+      ],
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "Markdown inline code (GREEN)",
+      "scope": "markup.inline.raw.string.markdown",
+      "settings": {
+        "foreground": "#098658"
+      }
+    },
+    {
+      "name": "Markdown code block content",
+      "scope": "markup.raw.block.fenced.markdown",
+      "settings": {
+        "foreground": "#4E5263"
+      }
+    },
+    {
+      "name": "Markdown code fence punctuation (dimmed)",
+      "scope": "punctuation.definition.code.fenced.markdown",
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "Markdown backtick punctuation (dimmed)",
+      "scope": "punctuation.definition.raw.markdown",
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "Code block language identifier (PURPLE)",
+      "scope": "entity.name.type.language.markdown",
+      "settings": {
+        "foreground": "#AF00DB"
+      }
+    },
+    {
+      "name": "Markdown link title (BLUE)",
+      "scope": "string.other.link.title.markdown",
+      "settings": {
+        "foreground": "#0070C1"
+      }
+    },
+    {
+      "name": "Markdown link URL (GREEN, underline)",
+      "scope": "markup.underline.link.markdown",
+      "settings": {
+        "foreground": "#098658",
+        "fontStyle": "underline"
+      }
+    },
+    {
+      "name": "Markdown link punctuation (dimmed)",
+      "scope": "punctuation.definition.link.markdown",
+      "settings": {
+        "foreground": "#A0A1A7"
+      }
+    },
+    {
+      "name": "Markdown list markers (PURPLE)",
+      "scope": "punctuation.definition.list.begin.markdown",
+      "settings": {
+        "foreground": "#AF00DB"
+      }
+    }
+  ]
+}
