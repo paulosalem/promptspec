@@ -3,12 +3,15 @@
   "name": "PromptSpec",
   "scopeName": "text.markdown.promptspec",
   "fileTypes": ["promptspec.md"],
-  "firstLineMatch": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract)\\b",
+  "firstLineMatch": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract|execute|prompt|tool)\\b",
   "patterns": [
     { "include": "#escaped-at" },
     { "include": "#note-block" },
     { "include": "#debug-query" },
     { "include": "#match-case" },
+    { "include": "#directive-execute" },
+    { "include": "#directive-prompt" },
+    { "include": "#directive-tool" },
     { "include": "#directive-refine" },
     { "include": "#directive-match" },
     { "include": "#directive-if" },
@@ -60,6 +63,31 @@
       "captures": {
         "2": { "name": "string.regexp.match-case.promptspec" },
         "4": { "name": "keyword.operator.fat-arrow.promptspec" }
+      }
+    },
+
+    "directive-execute": {
+      "match": "^(\\s*)(@execute)(\\s+)(\\S+)(.*)",
+      "captures": {
+        "2": { "name": "keyword.control.execute.promptspec" },
+        "4": { "name": "entity.name.type.strategy.promptspec" },
+        "5": { "patterns": [{ "include": "#kv-pair" }] }
+      }
+    },
+
+    "directive-prompt": {
+      "match": "^(\\s*)(@prompt)(\\s+)(\\w+)",
+      "captures": {
+        "2": { "name": "keyword.control.prompt.promptspec" },
+        "4": { "name": "entity.name.section.prompt.promptspec" }
+      }
+    },
+
+    "directive-tool": {
+      "match": "^(\\s*)(@tool)(\\s+)(\\S+)",
+      "captures": {
+        "2": { "name": "keyword.control.tool.promptspec" },
+        "4": { "name": "entity.name.function.tool.promptspec" }
       }
     },
 
@@ -121,7 +149,7 @@
     },
 
     "directive-keyword": {
-      "match": "^(\\s*)(@(?:refine|if|else|match|revise|expand|contract|canon|cohere|audience|style|summarize|compress|extract|generate_examples|output_format|structural_constraints|assert|note))\\b",
+      "match": "^(\\s*)(@(?:refine|if|else|match|execute|prompt|tool|revise|expand|contract|canon|cohere|audience|style|summarize|compress|extract|generate_examples|output_format|structural_constraints|assert|note))\\b",
       "captures": {
         "2": { "name": "keyword.control.directive.promptspec" }
       }

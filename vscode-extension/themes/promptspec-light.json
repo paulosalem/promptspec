@@ -11,6 +11,54 @@
   },
   "tokenColors": [
     {
+      "name": "@execute — spec-to-execution bridge (DARK GOLD, bold underline)",
+      "scope": "keyword.control.execute.promptspec",
+      "settings": {
+        "foreground": "#B8860B",
+        "fontStyle": "bold underline"
+      }
+    },
+    {
+      "name": "@execute strategy name (BURNT AMBER, bold)",
+      "scope": "entity.name.type.strategy.promptspec",
+      "settings": {
+        "foreground": "#CC7000",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "@prompt — named prompt block (ROYAL BLUE, bold underline)",
+      "scope": "keyword.control.prompt.promptspec",
+      "settings": {
+        "foreground": "#0050A0",
+        "fontStyle": "bold underline"
+      }
+    },
+    {
+      "name": "@prompt section name (DEEP BLUE, bold italic)",
+      "scope": "entity.name.section.prompt.promptspec",
+      "settings": {
+        "foreground": "#2060C0",
+        "fontStyle": "bold italic"
+      }
+    },
+    {
+      "name": "@tool directive (DARK TEAL, bold)",
+      "scope": "keyword.control.tool.promptspec",
+      "settings": {
+        "foreground": "#008B8B",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "@tool function name (DARK TEAL, italic)",
+      "scope": "entity.name.function.tool.promptspec",
+      "settings": {
+        "foreground": "#008B8B",
+        "fontStyle": "italic"
+      }
+    },
+    {
       "name": "Directive keywords — @refine, @if, @match, etc. (VIVID PURPLE, bold)",
       "scope": [
         "keyword.control.import.promptspec",

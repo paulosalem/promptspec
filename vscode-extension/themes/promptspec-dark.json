@@ -11,6 +11,54 @@
   },
   "tokenColors": [
     {
+      "name": "@execute — spec-to-execution bridge (GOLD, bold underline)",
+      "scope": "keyword.control.execute.promptspec",
+      "settings": {
+        "foreground": "#FFD700",
+        "fontStyle": "bold underline"
+      }
+    },
+    {
+      "name": "@execute strategy name (AMBER, bold)",
+      "scope": "entity.name.type.strategy.promptspec",
+      "settings": {
+        "foreground": "#FFA500",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "@prompt — named prompt block (ELECTRIC BLUE, bold underline)",
+      "scope": "keyword.control.prompt.promptspec",
+      "settings": {
+        "foreground": "#00BFFF",
+        "fontStyle": "bold underline"
+      }
+    },
+    {
+      "name": "@prompt section name (SKY BLUE, bold italic)",
+      "scope": "entity.name.section.prompt.promptspec",
+      "settings": {
+        "foreground": "#87CEEB",
+        "fontStyle": "bold italic"
+      }
+    },
+    {
+      "name": "@tool directive (TEAL, bold)",
+      "scope": "keyword.control.tool.promptspec",
+      "settings": {
+        "foreground": "#00CED1",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "name": "@tool function name (TEAL, italic)",
+      "scope": "entity.name.function.tool.promptspec",
+      "settings": {
+        "foreground": "#00CED1",
+        "fontStyle": "italic"
+      }
+    },
+    {
       "name": "Directive keywords — @refine, @if, @match, etc. (BRIGHT PINK, bold)",
       "scope": [
         "keyword.control.import.promptspec",
