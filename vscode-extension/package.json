@@ -35,7 +35,7 @@
         "extensions": [
           ".promptspec.md"
         ],
-        "firstLine": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract)\\b",
+        "firstLine": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract|execute|prompt|tool)\\b",
         "configuration": "./language-configuration.json"
       }
     ],
@@ -64,6 +64,34 @@
     "configurationDefaults": {
       "files.associations": {
         "*.promptspec.md": "promptspec"
+      },
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": "keyword.control.execute.promptspec",
+            "settings": { "fontStyle": "bold underline" }
+          },
+          {
+            "scope": "entity.name.type.strategy.promptspec",
+            "settings": { "fontStyle": "bold" }
+          },
+          {
+            "scope": "keyword.control.prompt.promptspec",
+            "settings": { "fontStyle": "bold underline" }
+          },
+          {
+            "scope": "entity.name.section.prompt.promptspec",
+            "settings": { "fontStyle": "bold italic" }
+          },
+          {
+            "scope": "keyword.control.tool.promptspec",
+            "settings": { "fontStyle": "bold" }
+          },
+          {
+            "scope": "entity.name.function.tool.promptspec",
+            "settings": { "fontStyle": "italic" }
+          }
+        ]
       }
     }
   }
