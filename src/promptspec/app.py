@@ -87,6 +87,11 @@ def create_parser() -> argparse.ArgumentParser:
         help="Disable all interactivity — pure batch mode",
     )
     parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Compile AND execute: run the composed prompt(s) through an engine",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Show detailed step-by-step progress",
@@ -97,6 +102,13 @@ def create_parser() -> argparse.ArgumentParser:
         "--model",
         default="gpt-4.1",
         help="LLM model to use (default: gpt-4.1)",
+    )
+
+    # Config
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="Path to a .promptspec.yaml or .json runtime config file",
     )
 
     return parser
@@ -261,6 +273,81 @@ async def run_interactive(
     return 0
 
 
+async def run_execute(
+    printer: CliPrinter,
+    spec_text: str,
+    variables: Dict[str, Any],
+    base_dir: Path,
+    args: argparse.Namespace,
+) -> int:
+    """Compile + execute: compose the spec, then run through an engine."""
+    from promptspec.engines import ExecutionResult, RuntimeConfig, resolve_engine
+
+    config = PromptSpecConfig(model=args.model)
+    controller = PromptSpecController(config)
+
+    # Load runtime config
+    runtime_config = None
+    if args.config:
+        if not args.config.is_file():
+            printer.error(f"Config file [bright_cyan]'{args.config}'[/] not found.")
+            return 1
+        if args.config.suffix in (".yaml", ".yml"):
+            runtime_config = RuntimeConfig.from_yaml(args.config)
+        else:
+            runtime_config = RuntimeConfig.from_json(args.config)
+        # Merge config variables (CLI overrides config)
+        merged_vars = {**runtime_config.variables, **variables}
+        variables = merged_vars
+
+    printer.header({"Spec": args.spec_file or "stdin", "Model": args.model, "Mode": "run"})
+    printer.variables(variables)
+    printer.status("Composing prompt…")
+
+    t0 = time.perf_counter()
+    result = await controller.compose(
+        spec_text, variables, base_dir, on_event=printer.event,
+    )
+
+    # Determine engine
+    engine_name = "single-call"
+    if runtime_config and runtime_config.engine:
+        engine_name = runtime_config.engine
+    elif result.execution and result.execution.get("type"):
+        engine_name = result.execution["type"]
+
+    printer.status(f"Executing with engine: {engine_name}…")
+    engine = resolve_engine(engine_name)
+    exec_result = await engine.execute(result, runtime_config)
+    elapsed = time.perf_counter() - t0
+
+    if args.output:
+        output = exec_result.output
+        if args.format == "json":
+            output = json.dumps({
+                "output": exec_result.output,
+                "steps": [{"name": s.name, "prompt_key": s.prompt_key} for s in exec_result.steps],
+                "metadata": exec_result.metadata,
+            }, indent=2, ensure_ascii=False)
+        args.output.write_text(output, encoding="utf-8")
+        printer.file_written(args.output)
+    else:
+        printer.result_markdown(exec_result.output)
+
+    if args.verbose:
+        printer.stats(
+            {
+                "Engine": engine_name,
+                "Steps": len(exec_result.steps),
+                "Output": f"{len(exec_result.output):,} chars",
+            },
+            elapsed=elapsed,
+        )
+
+    printer.done()
+    return 0
+
+
 # ------------------------------------------------------------------
 # Entry point
 # ------------------------------------------------------------------
@@ -294,7 +381,11 @@ def cli() -> None:
     variables = _parse_variables(printer, args)
 
     try:
-        if args.batch_only or args.stdin:
+        if args.run:
+            exit_code = asyncio.run(
+                run_execute(printer, spec_text, variables, base_dir, args),
+            )
+        elif args.batch_only or args.stdin:
             exit_code = asyncio.run(
                 run_batch(printer, spec_text, variables, base_dir, args),
             )

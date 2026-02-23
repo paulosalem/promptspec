@@ -1,0 +1,11 @@
+# Self-Consistency Solver — Runtime Config
+
+engine: self-consistency
+
+engine_config:
+  samples: 5
+  aggregation: majority-vote
+  temperature: 0.8
+
+variables:
+  problem: "A train leaves station A at 8:00 AM traveling at 60 mph. Another train leaves station B (300 miles away) at 9:00 AM traveling at 80 mph toward station A. At what time do they meet?"

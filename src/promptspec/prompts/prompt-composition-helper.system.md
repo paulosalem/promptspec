@@ -26,14 +26,16 @@ Tool calls are not considered part of your textual output. If you invoke primiti
 
 Tags:
   - `<output>`: contains the current state of the overall composition, including the prompt and any warnings/errors/suggestions.
-  - `<prompt>`: contains the current version of the prompt after processing.
+  - `<prompt>`: contains the current version of the prompt after processing. If the spec has no `@prompt` directives, this is the single composed prompt. If `@prompt` directives are present, this should contain the shared context (for display purposes — the full named prompts are in `<prompts>`).
+  - `<prompts>`: contains a JSON object mapping prompt names to their composed text. If no `@prompt` directives are present, this should be `{"default": "<the composed prompt>"}`. If `@prompt` directives are present, each named prompt (with shared context prepended) appears as a key-value pair.
   - `<tools>`: contains a JSON array of tool/function definitions collected from `@tool` directives (OpenAI function-calling format). If no `@tool` directives are present, this tag should contain an empty JSON array `[]`.
+  - `<execution>`: contains a JSON object with execution strategy metadata from `@execution` directives. If no `@execution` directive is present, this should contain an empty JSON object `{}`.
   - `<analysis>`: contains a brief, high-level rationale for the changes you made this step. It may be empty. Do NOT include detailed step-by-step traces here (those belong in the transformations log via `log_transition`).
   - `<warnings>`: contains any warnings that were issued during processing. If none, leave the tag empty.
   - `<errors>`: contains any errors that were issued during processing. If none, leave the tag empty.
   - `<suggestions>`: contains any suggestions for improving the prompt. If none, leave the tag empty.
 
-**Always include all six inner tags** (`<prompt>`, `<tools>`, `<analysis>`, `<warnings>`, `<errors>`, `<suggestions>`), even when some are empty.
+**Always include all eight inner tags** (`<prompt>`, `<prompts>`, `<tools>`, `<execution>`, `<analysis>`, `<warnings>`, `<errors>`, `<suggestions>`), even when some are empty.
 
 Example output:
 
@@ -42,6 +44,9 @@ Example output:
   <prompt>
     This is the current version of the prompt after processing.
   </prompt>
+  <prompts>
+    {"default": "This is the current version of the prompt after processing."}
+  </prompts>
   <tools>
     [
       {
@@ -63,6 +68,9 @@ Example output:
       }
     ]
   </tools>
+  <execution>
+    {}
+  </execution>
   <analysis>
     High-level rationale for what changed and why. (May be empty.)
   </analysis>
@@ -722,6 +730,98 @@ Semantics:
 - Compare the match expression against each case in order.
 - First match wins; `_` is used if no other case matches.
 - If no match and no `_` case exists, emit a warning and remove the entire `@match` block.
+
+### Multi-Prompt Directives
+
+#### `@prompt`
+
+The `@prompt` directive slices a single spec file into multiple **named prompts**. This is used by multi-step execution strategies (e.g., tree of thought, reflection) that need different prompts for different stages.
+
+Syntax:
+```
+@prompt <name>
+  <prompt content — can include any directives and variables>
+```
+
+Directive Semantics:
+1. Text **outside** any `@prompt` block is **shared context**. It is prepended to every named prompt in the output.
+2. Each `@prompt <name>` block produces an independently composed prompt identified by `<name>`.
+3. If the spec contains **no** `@prompt` directives, the entire spec compiles to a single prompt with the key `"default"`.
+4. If the spec contains `@prompt` directives, only the shared context (text outside `@prompt` blocks) plus each block's content forms that named prompt. There is no `"default"` key unless a `@prompt default` block is explicitly defined.
+5. `@tool` directives at the top level (outside `@prompt` blocks) apply to all prompts. `@tool` inside a `@prompt` block is scoped to that prompt only.
+6. Other directives (`@if`, `@match`, `@refine`, `@style`, etc.) work normally inside `@prompt` blocks.
+7. Each named prompt is emitted in the `<prompts>` section of the output XML as a JSON object mapping name → composed text.
+
+Example:
+```
+# Problem Solver
+
+You are solving: {{problem}}
+Think carefully and rigorously.
+
+@prompt generate
+  Generate {{branching_factor}} distinct approaches to solving the problem.
+  For each, provide a name and 2-3 sentence description.
+
+@prompt evaluate
+  Given these candidate approaches:
+  {{candidates}}
+  
+  Rate each on feasibility (1-10), creativity (1-10), and completeness (1-10).
+
+@prompt synthesize
+  The winning approach was: {{best_approach}}
+  
+  Elaborate this into a complete, detailed solution.
+```
+
+This produces three named prompts, each prefixed with the shared context ("You are solving...").
+
+
+### Execution Strategy Directives
+
+#### `@execution`
+
+The `@execution` directive declares the default execution strategy for the spec. It is **metadata only** — it does not modify any prompt text. The value is passed through to the `<execution>` section of the output XML for the runtime to interpret.
+
+Syntax:
+```
+@execution <strategy_type>
+  <key>: <value>
+  <key>: <value>
+```
+
+Directive Semantics:
+1. The `@execution` directive does NOT modify the prompt text S. It contributes metadata to the output.
+2. `<strategy_type>` is a string identifying the execution strategy (e.g., `single-call`, `self-consistency`, `tree-of-thought`, `reflection`).
+3. Indented key-value pairs below `@execution` are strategy configuration parameters.
+4. The entire directive is emitted as a JSON object in the `<execution>` section of the output XML.
+5. If no `@execution` directive is present, the `<execution>` section should contain an empty JSON object `{}`.
+6. If multiple `@execution` directives appear, the last one wins and a warning is emitted.
+
+Example:
+```
+@execution tree-of-thought
+  branching_factor: 3
+  max_depth: 2
+```
+
+Produces:
+```json
+{
+  "type": "tree-of-thought",
+  "branching_factor": 3,
+  "max_depth": 2
+}
+```
+
+Example with self-consistency:
+```
+@execution self-consistency
+  samples: 5
+  aggregation: majority-vote
+```
+
 
 ### Tool/Function Definition Directives
 

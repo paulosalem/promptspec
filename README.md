@@ -141,6 +141,73 @@ In JSON output mode, tool definitions appear in the `tools` array alongside the 
 
 See [`specs/react-agent.promptspec.md`](specs/react-agent.promptspec.md) for a full example.
 
+### Execution Engines (`--run`)
+
+PromptSpec can **compile and execute** specs in one step. Use `--run` to invoke an execution engine that orchestrates multi-step strategies like Tree of Thought, Self-Consistency, and Reflection.
+
+```bash
+# Compile + execute with Tree of Thought
+promptspec specs/tree-of-thought-solver.promptspec.md \
+  --run --config specs/tree-of-thought-solver.promptspec.yaml
+
+# Self-consistency with 5 samples + majority vote
+promptspec specs/self-consistency-solver.promptspec.md \
+  --run --config specs/self-consistency-solver.promptspec.yaml
+```
+
+**Built-in engines** (backed by [ellements](https://github.com/paulosalem/ellements) strategies):
+
+| Engine | Strategy | Description |
+|--------|----------|-------------|
+| `single-call` | Default | One LLM call, returns result directly |
+| `self-consistency` | N samples + vote | Runs the prompt N times, aggregates via majority vote or LLM judge |
+| `tree-of-thought` | Generate → Evaluate → Synthesize | Explores multiple reasoning paths, evaluates, synthesizes the best |
+| `reflection` | Generate → Critique → Revise | Iterative self-improvement loop until critique finds no issues |
+
+**Multi-prompt specs** use the `@prompt` directive to define stage-specific prompts:
+
+```markdown
+@execution tree-of-thought
+  branching_factor: 3
+
+You are a problem solver.  # ← shared context (prepended to all prompts)
+
+@prompt generate
+  Generate {{branching_factor}} approaches to: {{problem}}
+
+@prompt evaluate
+  Evaluate these candidates: {{candidates}}
+
+@prompt synthesize
+  Elaborate the best approach: {{best_approach}}
+```
+
+**Runtime config** (`.promptspec.yaml`) controls per-prompt model/temperature and engine parameters:
+
+```yaml
+engine: tree-of-thought
+engine_config:
+  branching_factor: 3
+prompts:
+  generate: { model: gpt-4.1, temperature: 0.9 }
+  evaluate: { model: gpt-4.1, temperature: 0.1 }
+```
+
+**Custom engines**: implement the `Engine` protocol or extend `BaseEngine`:
+
+```python
+from promptspec.engines import Engine, ExecutionResult, resolve_engine
+
+# Use a built-in engine
+engine = resolve_engine("self-consistency")
+
+# Or create your own (no inheritance required — duck typing works)
+class MyEngine:
+    async def execute(self, result, config=None):
+        # Custom orchestration logic
+        return ExecutionResult(output="...")
+```
+
 ### Help
 
 ```bash
@@ -156,6 +223,8 @@ The `specs/` directory contains ready-to-use prompt specifications:
 | `base-analyst.promptspec.md` | _(none — base persona)_ | Reusable analytical persona for `@refine` |
 | `chain-of-thought.promptspec.md` | _(none — reasoning strategy)_ | Reusable chain-of-thought reasoning for `@refine` |
 | `react-agent.promptspec.md` | `@refine`, `@tool`, `@if`, `@match`, `@output_format` | ReAct research agent with tool definitions (search, read, calculate) |
+| `tree-of-thought-solver.promptspec.md` | `@execution`, `@prompt`×3 | Tree of Thought: generate → evaluate → synthesize pipeline |
+| `self-consistency-solver.promptspec.md` | `@execution`, `@refine`, `@output_format` | Self-consistency: run N times + majority vote |
 | `market-research-brief.promptspec.md` | `@refine`, `@match`, `@if`, `@note` | Market research report with depth/competitor toggles |
 | `code-review-checklist.promptspec.md` | `@refine`, `@match`, `@if`, `@note` | Language-specific code review with security audit |
 | `tutorial-generator.promptspec.md` | `@match`, `@if`, `@@` escaping | Technical tutorial with audience-level adaptation |
@@ -236,8 +305,15 @@ promptspec/
 ├── pyproject.toml          # Package configuration & dependencies
 ├── demo.sh                 # Interactive showcase of all directives
 ├── src/promptspec/         # Python package
-│   ├── app.py              # CLI entry point (batch + interactive modes)
-│   ├── controller.py       # PromptSpecController — drives the LLM loop
+│   ├── app.py              # CLI entry point (batch + interactive + run modes)
+│   ├── controller.py       # PromptSpecController — drives the LLM composition loop
+│   ├── engines/            # Execution engines (thin wrappers over ellements strategies)
+│   │   ├── base.py         # Engine protocol, BaseEngine, RuntimeConfig
+│   │   ├── registry.py     # resolve_engine() — built-in names + custom import paths
+│   │   ├── single_call.py  # Default: one LLM call
+│   │   ├── self_consistency.py  # N samples + majority vote / LLM judge
+│   │   ├── tree_of_thought.py   # Generate → evaluate → synthesize
+│   │   └── reflection.py   # Generate → critique → revise loop
 │   └── prompts/            # System prompt shipped with the package
 ├── specs/                  # Example prompt specifications
 │   ├── base-analyst.promptspec.md

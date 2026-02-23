@@ -73,9 +73,11 @@ class CompositionResult:
     """Result of a prompt composition run."""
 
     composed_prompt: str
+    prompts: Dict[str, str] = field(default_factory=dict)
     raw_xml: str = ""
     analysis: str = ""
     tools: List[Dict[str, Any]] = field(default_factory=list)
+    execution: Dict[str, Any] = field(default_factory=dict)
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     suggestions: List[str] = field(default_factory=list)
@@ -105,8 +107,12 @@ class CompositionResult:
             "transitions": self.transitions,
             "tool_calls_made": self.tool_calls_made,
         }
+        if self.prompts:
+            d["prompts"] = self.prompts
         if self.tools:
             d["tools"] = self.tools
+        if self.execution:
+            d["execution"] = self.execution
         return d
 
 
@@ -153,6 +159,20 @@ def _parse_tools_json(block: str) -> List[Dict[str, Any]]:
         return []
 
 
+def _parse_json_object(block: str, tag_name: str) -> Dict[str, Any]:
+    """Parse a JSON object from an XML tag block."""
+    if not block or not block.strip():
+        return {}
+    try:
+        parsed = json.loads(block)
+        if isinstance(parsed, dict):
+            return parsed
+        return {}
+    except json.JSONDecodeError:
+        logger.warning("Failed to parse <%s> JSON: %s", tag_name, block[:200])
+        return {}
+
+
 def parse_composition_xml(raw: str) -> CompositionResult:
     """Parse the XML-structured LLM output into a CompositionResult.
 
@@ -170,17 +190,25 @@ def parse_composition_xml(raw: str) -> CompositionResult:
         return CompositionResult(composed_prompt=raw.strip(), raw_xml=raw)
 
     prompt = _extract_tag(output_block, "prompt")
+    prompts = _parse_json_object(_extract_tag(output_block, "prompts"), "prompts")
     tools = _parse_tools_json(_extract_tag(output_block, "tools"))
+    execution = _parse_json_object(_extract_tag(output_block, "execution"), "execution")
     analysis = _extract_tag(output_block, "analysis")
     warnings = _parse_issue_lines(_extract_tag(output_block, "warnings"))
     errors = _parse_issue_lines(_extract_tag(output_block, "errors"))
     suggestions = _parse_issue_lines(_extract_tag(output_block, "suggestions"))
 
+    # If no <prompts> was emitted, default to {"default": prompt}
+    if not prompts and prompt:
+        prompts = {"default": prompt}
+
     return CompositionResult(
         composed_prompt=prompt,
+        prompts=prompts,
         raw_xml=raw.strip(),
         analysis=analysis,
         tools=tools,
+        execution=execution,
         warnings=warnings,
         errors=errors,
         suggestions=suggestions,
@@ -267,6 +295,7 @@ class PromptSpecController:
             "This includes `@refine`, `@match`, `@if`/`@else`, `@note`, `@revise`, `@canon`, "
             "`@cohere`, `@audience`, `@style`, `@summarize`, `@compress`, `@extract`, "
             "`@generate_examples`, `@output_format`, `@structural_constraints`, `@assert`, "
+            "`@prompt`, `@execution`, `@tool`, "
             "and debug queries (`@directives?`, `@vars?`, `@structure?`).\n"
             "3. After each iteration pass, call `log_transition(text)` exactly once.\n"
             "4. Unescape `@@` → `@`.\n\n"
@@ -282,9 +311,15 @@ class PromptSpecController:
             "  <prompt>\n"
             "    (the fully composed prompt goes here)\n"
             "  </prompt>\n"
+            "  <prompts>\n"
+            '    (a JSON object mapping prompt names to composed text, e.g. {"default": "..."} or {"generate": "...", "evaluate": "..."})\n'
+            "  </prompts>\n"
             "  <tools>\n"
             "    (a JSON array of tool definitions from @tool directives, or [] if none)\n"
             "  </tools>\n"
+            "  <execution>\n"
+            "    (a JSON object with execution strategy metadata from @execution, or {} if none)\n"
+            "  </execution>\n"
             "  <analysis>\n"
             "    (brief high-level rationale for what changed and why; may be empty)\n"
             "  </analysis>\n"
