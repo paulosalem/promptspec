@@ -782,7 +782,11 @@ This produces three named prompts, each prefixed with the shared context ("You a
 
 #### `@execute`
 
-The `@execute` directive declares the default execution strategy for the spec. It is **metadata only** — it does not modify any prompt text. The value is passed through to the `<execution>` section of the output XML for the runtime to interpret.
+The `@execute` directive is a **special bridging directive** that connects the specification domain (what the prompt *says*) with the execution domain (how the prompt is *run*). Unlike all other directives — which transform, compose, or annotate prompt text — `@execute` is **metadata only**: it does not modify any prompt content. Instead, it declares *how* the runtime should orchestrate LLM calls when the spec is executed.
+
+This makes `@execute` fundamentally different from the rest of the directive language. While directives like `@refine`, `@summarize`, and `@match` operate within the prompt-composition phase, `@execute` reaches across the boundary into the execution phase, telling the engine *what strategy to use* and *with what parameters*. It is the single point where a spec author can influence runtime behavior declaratively, without writing code.
+
+**Current scope.** Today `@execute` is used to select multi-step reasoning strategies — Tree of Thought, Self-Consistency, Reflection, and others — that require multiple coordinated LLM calls. But the mechanism is intentionally general: in the future `@execute` may be extended to declare other runtime concerns such as caching policies, parallelism hints, evaluation harnesses, or integration with external orchestration systems — anything that belongs to the *how it runs* side rather than the *what it says* side.
 
 Syntax:
 ```

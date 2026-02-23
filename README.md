@@ -155,6 +155,11 @@ promptspec specs/self-consistency-solver.promptspec.md \
   --run --config specs/self-consistency-solver.promptspec.yaml
 ```
 
+**The `@execute` directive — bridging specification and execution.**
+Most PromptSpec directives operate within the *specification* domain: they transform, compose, and annotate prompt text. The `@execute` directive is a special case — it bridges the spec domain with the *execution* domain, declaring *how* the runtime should orchestrate LLM calls rather than *what* the prompt says. It is metadata only and never modifies prompt content.
+
+Today `@execute` selects multi-step reasoning strategies (Tree of Thought, Self-Consistency, Reflection). In the future, it may be extended to declare other runtime concerns — caching policies, parallelism hints, evaluation harnesses, or integration with external orchestration systems.
+
 **Built-in engines** (backed by [ellements](https://github.com/paulosalem/ellements) strategies):
 
 | Engine | Strategy | Description |
