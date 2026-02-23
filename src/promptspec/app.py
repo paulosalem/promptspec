@@ -281,6 +281,7 @@ async def run_execute(
     args: argparse.Namespace,
 ) -> int:
     """Compile + execute: compose the spec, then run through an engine."""
+    from ellements.patterns.strategies import StepRecord
     from promptspec.engines import ExecutionResult, RuntimeConfig, resolve_engine
 
     config = PromptSpecConfig(model=args.model)
@@ -317,8 +318,50 @@ async def run_execute(
         engine_name = result.execution["type"]
 
     printer.status(f"Executing with engine: {engine_name}…")
+
+    # Build live-step callback for --verbose
+    step_counter = [0]
+    step_icons = {
+        "generate": "✏️ ",
+        "evaluate": "🔍",
+        "synthesize": "🧩",
+        "critique": "🧐",
+        "revise": "📝",
+        "sample": "🎲",
+        "vote": "🗳️ ",
+        "judge": "⚖️ ",
+        "call": "📡",
+        "stop": "🛑",
+    }
+
+    def _on_step(step: StepRecord) -> None:
+        step_counter[0] += 1
+        elapsed_so_far = time.perf_counter() - t0
+        base_name = step.name.split("_")[0]
+        icon = step_icons.get(base_name, "▸ ")
+        preview = step.response[:120].replace("\n", " ")
+        if len(step.response) > 120:
+            preview += "…"
+        meta_parts = []
+        if step.metadata.get("round") is not None:
+            meta_parts.append(f"round {step.metadata['round']}")
+        if step.metadata.get("reason"):
+            meta_parts.append(step.metadata["reason"])
+        if step.metadata.get("aggregation"):
+            meta_parts.append(step.metadata["aggregation"])
+        meta_str = f" ({', '.join(meta_parts)})" if meta_parts else ""
+        printer.console.print(
+            f"  {icon} [bold]Step {step_counter[0]}[/]: "
+            f"[bright_cyan]{step.name}[/]{meta_str}  "
+            f"[dim]{elapsed_so_far:.1f}s[/]"
+        )
+        if args.verbose:
+            printer.console.print(f"     [dim]{preview}[/]")
+
+    on_step = _on_step if args.verbose else None
+
     engine = resolve_engine(engine_name)
-    exec_result = await engine.execute(result, runtime_config)
+    exec_result = await engine.execute(result, runtime_config, on_step=on_step)
     elapsed = time.perf_counter() - t0
 
     if args.output:

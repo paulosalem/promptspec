@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 
 from ellements.core import LLMClient
-from ellements.patterns.strategies import StepRecord, StrategyResult
+from ellements.patterns.strategies import OnStepCallback, StepRecord, StrategyResult
 
 from ..controller import CompositionResult
 
@@ -103,6 +103,7 @@ class Engine(Protocol):
         self,
         result: CompositionResult,
         config: Optional[RuntimeConfig] = None,
+        on_step: Optional[OnStepCallback] = None,
     ) -> ExecutionResult: ...
 
 
@@ -116,6 +117,7 @@ class BaseEngine:
         self,
         result: CompositionResult,
         config: Optional[RuntimeConfig] = None,
+        on_step: Optional[OnStepCallback] = None,
     ) -> Dict[str, Any]:
         """Merge execution metadata from the spec with runtime config."""
         strategy_config: Dict[str, Any] = {}
@@ -127,6 +129,9 @@ class BaseEngine:
         # Override with runtime engine_config
         if config and config.engine_config:
             strategy_config.update(config.engine_config)
+        # Inject on_step callback
+        if on_step:
+            strategy_config["on_step"] = on_step
         return strategy_config
 
     def _wrap_result(self, sr: StrategyResult) -> ExecutionResult:
