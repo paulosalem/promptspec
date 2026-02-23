@@ -1,0 +1,22 @@
+# Reflection Writer — Runtime Config
+
+engine: reflection
+
+engine_config:
+  max_iterations: 3
+
+prompts:
+  generate:
+    model: gpt-4.1
+    temperature: 0.7
+  critique:
+    model: gpt-4.1
+    temperature: 0.2
+  revise:
+    model: gpt-4.1
+    temperature: 0.4
+
+variables:
+  topic: "How containerization (Docker) works and why developers use it"
+  audience: "junior developers who have never used containers"
+  length: "400-600 words"
