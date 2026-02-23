@@ -75,8 +75,8 @@ function createDecorations() {
     isWholeLine: true,
     borderWidth: "0 0 0 2px",
     borderStyle: "solid",
-    borderColor: "#FF5555",
-    backgroundColor: "rgba(255, 85, 85, 0.04)",
+    borderColor: "#B34040",
+    backgroundColor: "rgba(179, 64, 64, 0.04)",
     before: { contentText: " ", width: "6px" },
   });
 
