@@ -1,6 +1,6 @@
 # Self-Consistency Math Solver
 
-@execution self-consistency
+@execute self-consistency
   samples: 5
   aggregation: majority-vote
 

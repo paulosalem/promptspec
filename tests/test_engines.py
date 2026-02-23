@@ -1,4 +1,4 @@
-"""Tests for PromptSpec engines, @prompt/@execution parsing, and the run flow.
+"""Tests for PromptSpec engines, @prompt/@execute parsing, and the run flow.
 
 Unit tests (no LLM required) verify:
 - parse_composition_xml handles <prompts> and <execution> tags
@@ -7,7 +7,7 @@ Unit tests (no LLM required) verify:
 - Engine wrappers delegate to ellements strategies correctly
 
 Integration tests (require OPENAI_API_KEY) verify:
-- @prompt and @execution directives work end-to-end
+- @prompt and @execute directives work end-to-end
 """
 
 import json
@@ -62,7 +62,7 @@ class MockLLMClient:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Unit Tests: @prompt and @execution XML parsing
+# Unit Tests: @prompt and @execute XML parsing
 # ═══════════════════════════════════════════════════════════════════
 
 class TestParsePromptsAndExecution:
@@ -420,7 +420,7 @@ class TestTreeOfThoughtEngine:
 
     @pytest.mark.asyncio
     async def test_config_override(self):
-        """RuntimeConfig engine_config overrides @execution params."""
+        """RuntimeConfig engine_config overrides @execute params."""
         from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
         from promptspec.engines.base import RuntimeConfig
 
@@ -549,12 +549,12 @@ class TestPromptDirectiveE2E:
     @pytest.mark.integration
     @pytest.mark.asyncio
     async def test_execution_directive(self):
-        """@execution directive produces execution metadata."""
+        """@execute directive produces execution metadata."""
         from promptspec.controller import PromptSpecController, PromptSpecConfig
 
         spec = (
             "You are a solver.\n\n"
-            "@execution self-consistency\n"
+            "@execute self-consistency\n"
             "  samples: 5\n"
             "  aggregation: majority-vote\n"
         )

@@ -1,6 +1,6 @@
 # Reflection Writer
 
-@execution reflection
+@execute reflection
   max_iterations: 3
 
 You are a skilled technical writer. Your goal is to produce clear,

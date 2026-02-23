@@ -121,7 +121,7 @@ class BaseEngine:
     ) -> Dict[str, Any]:
         """Merge execution metadata from the spec with runtime config."""
         strategy_config: Dict[str, Any] = {}
-        # Start with spec-level @execution config
+        # Start with spec-level @execute config
         if result.execution:
             strategy_config.update(
                 {k: v for k, v in result.execution.items() if k != "type"}

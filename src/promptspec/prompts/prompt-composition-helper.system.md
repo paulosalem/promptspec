@@ -29,7 +29,7 @@ Tags:
   - `<prompt>`: contains the current version of the prompt after processing. If the spec has no `@prompt` directives, this is the single composed prompt. If `@prompt` directives are present, this should contain the shared context (for display purposes — the full named prompts are in `<prompts>`).
   - `<prompts>`: contains a JSON object mapping prompt names to their composed text. If no `@prompt` directives are present, this should be `{"default": "<the composed prompt>"}`. If `@prompt` directives are present, each named prompt (with shared context prepended) appears as a key-value pair.
   - `<tools>`: contains a JSON array of tool/function definitions collected from `@tool` directives (OpenAI function-calling format). If no `@tool` directives are present, this tag should contain an empty JSON array `[]`.
-  - `<execution>`: contains a JSON object with execution strategy metadata from `@execution` directives. If no `@execution` directive is present, this should contain an empty JSON object `{}`.
+  - `<execution>`: contains a JSON object with execution strategy metadata from `@execute` directives. If no `@execute` directive is present, this should contain an empty JSON object `{}`.
   - `<analysis>`: contains a brief, high-level rationale for the changes you made this step. It may be empty. Do NOT include detailed step-by-step traces here (those belong in the transformations log via `log_transition`).
   - `<warnings>`: contains any warnings that were issued during processing. If none, leave the tag empty.
   - `<errors>`: contains any errors that were issued during processing. If none, leave the tag empty.
@@ -780,28 +780,28 @@ This produces three named prompts, each prefixed with the shared context ("You a
 
 ### Execution Strategy Directives
 
-#### `@execution`
+#### `@execute`
 
-The `@execution` directive declares the default execution strategy for the spec. It is **metadata only** — it does not modify any prompt text. The value is passed through to the `<execution>` section of the output XML for the runtime to interpret.
+The `@execute` directive declares the default execution strategy for the spec. It is **metadata only** — it does not modify any prompt text. The value is passed through to the `<execution>` section of the output XML for the runtime to interpret.
 
 Syntax:
 ```
-@execution <strategy_type>
+@execute <strategy_type>
   <key>: <value>
   <key>: <value>
 ```
 
 Directive Semantics:
-1. The `@execution` directive does NOT modify the prompt text S. It contributes metadata to the output.
+1. The `@execute` directive does NOT modify the prompt text S. It contributes metadata to the output.
 2. `<strategy_type>` is a string identifying the execution strategy (e.g., `single-call`, `self-consistency`, `tree-of-thought`, `reflection`).
-3. Indented key-value pairs below `@execution` are strategy configuration parameters.
+3. Indented key-value pairs below `@execute` are strategy configuration parameters.
 4. The entire directive is emitted as a JSON object in the `<execution>` section of the output XML.
-5. If no `@execution` directive is present, the `<execution>` section should contain an empty JSON object `{}`.
-6. If multiple `@execution` directives appear, the last one wins and a warning is emitted.
+5. If no `@execute` directive is present, the `<execution>` section should contain an empty JSON object `{}`.
+6. If multiple `@execute` directives appear, the last one wins and a warning is emitted.
 
 Example:
 ```
-@execution tree-of-thought
+@execute tree-of-thought
   branching_factor: 3
   max_depth: 2
 ```
@@ -817,7 +817,7 @@ Produces:
 
 Example with self-consistency:
 ```
-@execution self-consistency
+@execute self-consistency
   samples: 5
   aggregation: majority-vote
 ```

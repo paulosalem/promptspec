@@ -167,7 +167,7 @@ promptspec specs/self-consistency-solver.promptspec.md \
 **Multi-prompt specs** use the `@prompt` directive to define stage-specific prompts:
 
 ```markdown
-@execution tree-of-thought
+@execute tree-of-thought
   branching_factor: 3
 
 You are a problem solver.  # ← shared context (prepended to all prompts)
@@ -223,8 +223,8 @@ The `specs/` directory contains ready-to-use prompt specifications:
 | `base-analyst.promptspec.md` | _(none — base persona)_ | Reusable analytical persona for `@refine` |
 | `chain-of-thought.promptspec.md` | _(none — reasoning strategy)_ | Reusable chain-of-thought reasoning for `@refine` |
 | `react-agent.promptspec.md` | `@refine`, `@tool`, `@if`, `@match`, `@output_format` | ReAct research agent with tool definitions (search, read, calculate) |
-| `tree-of-thought-solver.promptspec.md` | `@execution`, `@prompt`×3 | Tree of Thought: generate → evaluate → synthesize pipeline |
-| `self-consistency-solver.promptspec.md` | `@execution`, `@refine`, `@output_format` | Self-consistency: run N times + majority vote |
+| `tree-of-thought-solver.promptspec.md` | `@execute`, `@prompt`×3 | Tree of Thought: generate → evaluate → synthesize pipeline |
+| `self-consistency-solver.promptspec.md` | `@execute`, `@refine`, `@output_format` | Self-consistency: run N times + majority vote |
 | `market-research-brief.promptspec.md` | `@refine`, `@match`, `@if`, `@note` | Market research report with depth/competitor toggles |
 | `code-review-checklist.promptspec.md` | `@refine`, `@match`, `@if`, `@note` | Language-specific code review with security audit |
 | `tutorial-generator.promptspec.md` | `@match`, `@if`, `@@` escaping | Technical tutorial with audience-level adaptation |

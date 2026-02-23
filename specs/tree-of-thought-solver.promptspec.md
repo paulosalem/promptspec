@@ -1,6 +1,6 @@
 # Tree of Thought Solver
 
-@execution tree-of-thought
+@execute tree-of-thought
   branching_factor: 3
   max_depth: 2
 
