@@ -1,6 +1,6 @@
 # PromptSpec
 
-Compose prompts from specification files that use directives (`@refine`, `@if`, `@match`, `@note`), variables (`{{name}}`), and file includes — all processed by an LLM via multi-turn tool calling.
+Compose prompts from specification files that use directives (`@refine`, `@if`, `@match`, `@tool`, `@note`), variables (`{{name}}`), and file includes — all processed by an LLM via multi-turn tool calling.
 
 ## Purpose
 
@@ -8,6 +8,7 @@ Prompt engineering at scale requires **composable, reusable prompt components**.
 
 - **Refine** a base persona with domain-specific instructions (`@refine base-analyst.promptspec.md`)
 - **Branch** on variables (`@match language`, `@if include_exercises`)
+- **Define tools** for function-calling agents (`@tool search_web`)
 - **Annotate** with meta-comments stripped from final output (`@note`)
 - **Parameterize** with variables (`{{company}}`, `{{audience}}`)
 
@@ -75,9 +76,70 @@ promptspec specs/tutorial-generator.promptspec.md \
 ### Output Formats
 
 - **`--format markdown`** (default) — Human-readable Markdown; non-verbose prints only the prompt
-- **`--format json`** — Machine-readable JSON with `composed_prompt`, `issues`, and `tool_calls_made`
+- **`--format json`** — Machine-readable JSON with `composed_prompt`, `tools`, `issues`, and `tool_calls_made`
 - **`--format xml`** — Raw XML output from the LLM for further processing
 - **`--output report.md`** / **`-o report.md`** — Write to a file instead of stdout
+
+### Tool/Function Calling
+
+Use the `@tool` directive to define tools/functions that the composed prompt's consumer can invoke via LLM function calling. Tool definitions are compiled to OpenAI-compatible JSON Schema — which works universally across all providers via LiteLLM.
+
+```markdown
+@tool search_web
+  Search the web for information and return relevant results.
+  - query: string (required) — The search query
+  - max_results: integer default: 5 — Maximum results
+
+@tool get_weather
+  Get current weather for a location.
+  - location: string (required) — City name or coordinates
+  - units: string enum: [celsius, fahrenheit] default: celsius — Units
+```
+
+Tools compose naturally with control-flow directives:
+
+```markdown
+@if include_web_tools
+  @tool search_web
+    Search the web for information.
+    - query: string (required) — Search query
+
+@match agent_type
+  "researcher" ==>
+    @tool read_paper
+      Read an academic paper.
+      - url: string (required) — Paper URL
+  "coder" ==>
+    @tool run_code
+      Execute code in a sandbox.
+      - code: string (required) — Code to run
+```
+
+In JSON output mode, tool definitions appear in the `tools` array alongside the composed prompt:
+
+```json
+{
+  "composed_prompt": "You are a research assistant...",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "search_web",
+        "description": "Search the web for information.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": { "type": "string", "description": "The search query" }
+          },
+          "required": ["query"]
+        }
+      }
+    }
+  ]
+}
+```
+
+See [`specs/react-agent.promptspec.md`](specs/react-agent.promptspec.md) for a full example.
 
 ### Help
 
@@ -92,6 +154,8 @@ The `specs/` directory contains ready-to-use prompt specifications:
 | Spec | Directives Used | Description |
 |------|----------------|-------------|
 | `base-analyst.promptspec.md` | _(none — base persona)_ | Reusable analytical persona for `@refine` |
+| `chain-of-thought.promptspec.md` | _(none — reasoning strategy)_ | Reusable chain-of-thought reasoning for `@refine` |
+| `react-agent.promptspec.md` | `@refine`, `@tool`, `@if`, `@match`, `@output_format` | ReAct research agent with tool definitions (search, read, calculate) |
 | `market-research-brief.promptspec.md` | `@refine`, `@match`, `@if`, `@note` | Market research report with depth/competitor toggles |
 | `code-review-checklist.promptspec.md` | `@refine`, `@match`, `@if`, `@note` | Language-specific code review with security audit |
 | `tutorial-generator.promptspec.md` | `@match`, `@if`, `@@` escaping | Technical tutorial with audience-level adaptation |
@@ -186,6 +250,7 @@ promptspec/
 │   ├── multi-persona-debate.promptspec.md       # Showcase: semantic expand/contract
 │   ├── adaptive-interview.promptspec.md         # Showcase: deep nesting + transforms
 │   ├── prompt-refactoring-pipeline.promptspec.md # Showcase: prompt-as-code refactoring
+│   ├── react-agent.promptspec.md                # Showcase: @tool directive with ReAct agent
 │   └── vars/               # JSON variable files
 ├── tests/                  # Test suite
 └── vscode-extension/       # Syntax highlighting for .promptspec.md files

@@ -27,12 +27,13 @@ Tool calls are not considered part of your textual output. If you invoke primiti
 Tags:
   - `<output>`: contains the current state of the overall composition, including the prompt and any warnings/errors/suggestions.
   - `<prompt>`: contains the current version of the prompt after processing.
+  - `<tools>`: contains a JSON array of tool/function definitions collected from `@tool` directives (OpenAI function-calling format). If no `@tool` directives are present, this tag should contain an empty JSON array `[]`.
   - `<analysis>`: contains a brief, high-level rationale for the changes you made this step. It may be empty. Do NOT include detailed step-by-step traces here (those belong in the transformations log via `log_transition`).
   - `<warnings>`: contains any warnings that were issued during processing. If none, leave the tag empty.
   - `<errors>`: contains any errors that were issued during processing. If none, leave the tag empty.
   - `<suggestions>`: contains any suggestions for improving the prompt. If none, leave the tag empty.
 
-**Always include all five inner tags** (`<prompt>`, `<analysis>`, `<warnings>`, `<errors>`, `<suggestions>`), even when some are empty.
+**Always include all six inner tags** (`<prompt>`, `<tools>`, `<analysis>`, `<warnings>`, `<errors>`, `<suggestions>`), even when some are empty.
 
 Example output:
 
@@ -41,6 +42,27 @@ Example output:
   <prompt>
     This is the current version of the prompt after processing.
   </prompt>
+  <tools>
+    [
+      {
+        "type": "function",
+        "function": {
+          "name": "search_web",
+          "description": "Search the web for information.",
+          "parameters": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "The search query"
+              }
+            },
+            "required": ["query"]
+          }
+        }
+      }
+    ]
+  </tools>
   <analysis>
     High-level rationale for what changed and why. (May be empty.)
   </analysis>
@@ -700,6 +722,86 @@ Semantics:
 - Compare the match expression against each case in order.
 - First match wins; `_` is used if no other case matches.
 - If no match and no `_` case exists, emit a warning and remove the entire `@match` block.
+
+### Tool/Function Definition Directives
+
+#### `@tool`
+
+The `@tool` directive declares a tool (function) that the composed prompt's consumer can invoke via LLM tool/function calling. Tool definitions are **not** inserted into the prompt text; instead they are collected and emitted in the `<tools>` section of the output XML.
+
+Syntax:
+```
+@tool <function_name>
+  <description — one or more lines of free text>
+  - <param_name>: <type> (required) — <description>
+  - <param_name>: <type> — <description>
+  - <param_name>: <type> enum: [val1, val2] — <description>
+  - <param_name>: <type> default: <value> — <description>
+```
+
+Supported types: `string`, `integer`, `number`, `boolean`, `array`, `object`.
+
+Parameter modifiers (all optional, order-independent before the `—` description):
+- `(required)` — marks the parameter as required.
+- `enum: [val1, val2, ...]` — restricts allowed values.
+- `default: <value>` — documents the default value.
+
+Directive Semantics:
+1. The `@tool` directive does NOT modify the prompt text S. Instead it contributes a tool definition to a separate tool registry maintained during composition.
+2. Each `@tool` block is compiled into an OpenAI-compatible function-calling JSON object:
+   ```json
+   {
+     "type": "function",
+     "function": {
+       "name": "<function_name>",
+       "description": "<description>",
+       "parameters": {
+         "type": "object",
+         "properties": { ... },
+         "required": [...]
+       }
+     }
+   }
+   ```
+3. All collected tool definitions are emitted in the `<tools>` section of the output XML (see Output Format).
+4. `@tool` directives are composable with control-flow directives:
+   - Inside `@if`: the tool is only included when the condition is true.
+   - Inside `@match`: different tool sets can be defined per case.
+   - Inside `@refine`: refined specs can contribute additional tools.
+5. If two `@tool` directives define the same function name, the later definition wins and a warning is emitted.
+
+Example — simple tools:
+```
+@tool search_web
+  Search the web for information and return relevant results.
+  - query: string (required) — The search query
+  - max_results: integer default: 5 — Maximum number of results
+
+@tool get_weather
+  Get current weather conditions for a location.
+  - location: string (required) — City name or coordinates
+  - units: string enum: [celsius, fahrenheit] default: celsius — Temperature units
+```
+
+Example — conditional tools:
+```
+@if include_web_tools
+  @tool search_web
+    Search the web for information.
+    - query: string (required) — Search query
+
+@match agent_type
+  "researcher" ==>
+    @tool read_paper
+      Read and summarize an academic paper.
+      - url: string (required) — URL of the paper
+  "coder" ==>
+    @tool run_code
+      Execute code in a sandbox.
+      - code: string (required) — Code to execute
+      - language: string enum: [python, javascript, go] — Programming language
+```
+
 
 ### Meta-Comments: `@note`
 

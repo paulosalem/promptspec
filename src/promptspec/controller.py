@@ -75,6 +75,7 @@ class CompositionResult:
     composed_prompt: str
     raw_xml: str = ""
     analysis: str = ""
+    tools: List[Dict[str, Any]] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     suggestions: List[str] = field(default_factory=list)
@@ -94,7 +95,7 @@ class CompositionResult:
         return result
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        d: Dict[str, Any] = {
             "composed_prompt": self.composed_prompt,
             "raw_xml": self.raw_xml,
             "analysis": self.analysis,
@@ -104,6 +105,9 @@ class CompositionResult:
             "transitions": self.transitions,
             "tool_calls_made": self.tool_calls_made,
         }
+        if self.tools:
+            d["tools"] = self.tools
+        return d
 
 
 def _extract_tag(text: str, tag: str) -> str:
@@ -135,6 +139,20 @@ def _parse_issue_lines(block: str) -> List[str]:
     return items
 
 
+def _parse_tools_json(block: str) -> List[Dict[str, Any]]:
+    """Parse the <tools> block — expects a JSON array of tool definitions."""
+    if not block or not block.strip():
+        return []
+    try:
+        parsed = json.loads(block)
+        if isinstance(parsed, list):
+            return parsed
+        return []
+    except json.JSONDecodeError:
+        logger.warning("Failed to parse <tools> JSON: %s", block[:200])
+        return []
+
+
 def parse_composition_xml(raw: str) -> CompositionResult:
     """Parse the XML-structured LLM output into a CompositionResult.
 
@@ -152,6 +170,7 @@ def parse_composition_xml(raw: str) -> CompositionResult:
         return CompositionResult(composed_prompt=raw.strip(), raw_xml=raw)
 
     prompt = _extract_tag(output_block, "prompt")
+    tools = _parse_tools_json(_extract_tag(output_block, "tools"))
     analysis = _extract_tag(output_block, "analysis")
     warnings = _parse_issue_lines(_extract_tag(output_block, "warnings"))
     errors = _parse_issue_lines(_extract_tag(output_block, "errors"))
@@ -161,6 +180,7 @@ def parse_composition_xml(raw: str) -> CompositionResult:
         composed_prompt=prompt,
         raw_xml=raw.strip(),
         analysis=analysis,
+        tools=tools,
         warnings=warnings,
         errors=errors,
         suggestions=suggestions,
@@ -262,6 +282,9 @@ class PromptSpecController:
             "  <prompt>\n"
             "    (the fully composed prompt goes here)\n"
             "  </prompt>\n"
+            "  <tools>\n"
+            "    (a JSON array of tool definitions from @tool directives, or [] if none)\n"
+            "  </tools>\n"
             "  <analysis>\n"
             "    (brief high-level rationale for what changed and why; may be empty)\n"
             "  </analysis>\n"

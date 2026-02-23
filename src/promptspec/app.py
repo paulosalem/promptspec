@@ -160,6 +160,13 @@ def _show_result(
     else:
         # Markdown — always show the prompt
         printer.result_markdown(result.composed_prompt)
+        if result.tools:
+            printer.console.print()
+            printer.console.print("[bold bright_blue]📦 Tools[/]")
+            printer.console.print(
+                json.dumps(result.tools, indent=2, ensure_ascii=False),
+                highlight=False,
+            )
 
     if verbose:
         printer.stats(
