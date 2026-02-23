@@ -1,8 +1,8 @@
 {
   "name": "promptspec",
   "displayName": "PromptSpec Syntax",
-  "description": "Syntax highlighting for PromptSpec specification files (.promptspec.md) — directives, variables, match cases, and more.",
-  "version": "0.1.0",
+  "description": "Syntax highlighting and visual decorations for PromptSpec specification files (.promptspec.md) — directives, variables, match cases, and more.",
+  "version": "0.2.0",
   "publisher": "prompting-adventures",
   "license": "MIT",
   "repository": {
@@ -12,6 +12,10 @@
   "engines": {
     "vscode": "^1.75.0"
   },
+  "main": "./src/extension.js",
+  "activationEvents": [
+    "onLanguage:promptspec"
+  ],
   "categories": [
     "Programming Languages",
     "Themes"
