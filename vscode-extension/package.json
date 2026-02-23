@@ -69,27 +69,27 @@
         "textMateRules": [
           {
             "scope": "keyword.control.execute.promptspec",
-            "settings": { "fontStyle": "bold underline" }
+            "settings": { "foreground": "#FFD700", "fontStyle": "bold" }
           },
           {
             "scope": "entity.name.type.strategy.promptspec",
-            "settings": { "fontStyle": "bold" }
+            "settings": { "foreground": "#FFA500", "fontStyle": "bold" }
           },
           {
             "scope": "keyword.control.prompt.promptspec",
-            "settings": { "fontStyle": "bold underline" }
+            "settings": { "foreground": "#00BFFF", "fontStyle": "bold" }
           },
           {
             "scope": "entity.name.section.prompt.promptspec",
-            "settings": { "fontStyle": "bold italic" }
+            "settings": { "foreground": "#87CEEB", "fontStyle": "bold italic" }
           },
           {
             "scope": "keyword.control.tool.promptspec",
-            "settings": { "fontStyle": "bold" }
+            "settings": { "foreground": "#00CED1", "fontStyle": "bold" }
           },
           {
             "scope": "entity.name.function.tool.promptspec",
-            "settings": { "fontStyle": "italic" }
+            "settings": { "foreground": "#00CED1", "fontStyle": "italic" }
           }
         ]
       }

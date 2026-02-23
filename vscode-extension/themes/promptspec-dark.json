@@ -11,11 +11,11 @@
   },
   "tokenColors": [
     {
-      "name": "@execute — spec-to-execution bridge (GOLD, bold underline)",
+      "name": "@execute — spec-to-execution bridge (GOLD, bold)",
       "scope": "keyword.control.execute.promptspec",
       "settings": {
         "foreground": "#FFD700",
-        "fontStyle": "bold underline"
+        "fontStyle": "bold"
       }
     },
     {
@@ -27,11 +27,11 @@
       }
     },
     {
-      "name": "@prompt — named prompt block (ELECTRIC BLUE, bold underline)",
+      "name": "@prompt — named prompt block (ELECTRIC BLUE, bold)",
       "scope": "keyword.control.prompt.promptspec",
       "settings": {
         "foreground": "#00BFFF",
-        "fontStyle": "bold underline"
+        "fontStyle": "bold"
       }
     },
     {
