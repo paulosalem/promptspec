@@ -60,6 +60,7 @@ function createDecorations() {
     borderStyle: "solid",
     borderColor: "#00CED1",
     backgroundColor: "rgba(0, 206, 209, 0.05)",
+    before: { contentText: " ", width: "6px" },
   });
 
   const controlFlow = vscode.window.createTextEditorDecorationType({
@@ -67,6 +68,7 @@ function createDecorations() {
     borderWidth: "0 0 0 2px",
     borderStyle: "solid",
     borderColor: "#FF79C6",
+    before: { contentText: " ", width: "6px" },
   });
 
   const matchCase = vscode.window.createTextEditorDecorationType({
@@ -75,6 +77,7 @@ function createDecorations() {
     borderStyle: "solid",
     borderColor: "#50FA7B",
     backgroundColor: "rgba(80, 250, 123, 0.04)",
+    before: { contentText: " ", width: "6px" },
   });
 
   const noteBlock = vscode.window.createTextEditorDecorationType({
@@ -84,6 +87,7 @@ function createDecorations() {
     borderColor: "#6272A4",
     backgroundColor: "rgba(98, 114, 164, 0.06)",
     opacity: "0.7",
+    before: { contentText: " ", width: "6px" },
   });
 
   const variable = vscode.window.createTextEditorDecorationType({
