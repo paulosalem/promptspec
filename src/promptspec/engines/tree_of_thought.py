@@ -14,12 +14,15 @@ from .base import BaseEngine, ExecutionResult, RuntimeConfig
 class TreeOfThoughtEngine(BaseEngine):
     """Generate → evaluate → synthesize multi-step engine."""
 
+    STRATEGY_CLASS = TreeOfThoughtStrategy
+
     async def execute(
         self,
         result: CompositionResult,
         config: Optional[RuntimeConfig] = None,
         on_step: Optional[OnStepCallback] = None,
     ) -> ExecutionResult:
+        self._validate_prompts(result)
         strategy = TreeOfThoughtStrategy()
         sr = await strategy.execute(
             result.prompts or {"default": result.composed_prompt},

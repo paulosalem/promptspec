@@ -563,3 +563,78 @@ class TestPromptDirectiveE2E:
 
         assert result.execution, "Should have execution metadata"
         assert result.execution.get("type") == "self-consistency"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Prompt validation tests
+# ═══════════════════════════════════════════════════════════════════
+
+class TestPromptValidation:
+    """Verify engines reject specs missing required @prompt blocks."""
+
+    @pytest.mark.asyncio
+    async def test_tree_of_thought_missing_prompts(self):
+        """ToT engine rejects spec with only default prompt."""
+        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
+        engine = TreeOfThoughtEngine(client=MockLLMClient(["x"] * 5))
+        result = CompositionResult(
+            composed_prompt="solve this",
+            raw_xml="",
+            prompts={"default": "solve this"},
+        )
+        with pytest.raises(ValueError, match="generate.*evaluate.*synthesize"):
+            await engine.execute(result)
+
+    @pytest.mark.asyncio
+    async def test_tree_of_thought_with_all_prompts(self):
+        """ToT engine accepts spec with all required prompts."""
+        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
+        engine = TreeOfThoughtEngine(client=MockLLMClient(["x"] * 5))
+        result = CompositionResult(
+            composed_prompt="",
+            raw_xml="",
+            prompts={
+                "generate": "gen {{branching_factor}}",
+                "evaluate": "eval {{candidates}}",
+                "synthesize": "synth {{best_approach}}",
+            },
+        )
+        exec_result = await engine.execute(result)
+        assert exec_result.output
+
+    @pytest.mark.asyncio
+    async def test_reflection_missing_prompts(self):
+        """Reflection engine rejects spec missing critique/revise."""
+        from promptspec.engines.reflection import ReflectionEngine
+        engine = ReflectionEngine(client=MockLLMClient(["x"] * 5))
+        result = CompositionResult(
+            composed_prompt="write something",
+            raw_xml="",
+            prompts={"default": "write something", "generate": "write"},
+        )
+        with pytest.raises(ValueError, match="critique.*revise"):
+            await engine.execute(result)
+
+    @pytest.mark.asyncio
+    async def test_self_consistency_with_default_only(self):
+        """Self-consistency only needs default — should pass."""
+        from promptspec.engines.self_consistency import SelfConsistencyEngine
+        engine = SelfConsistencyEngine(client=MockLLMClient(["ans"] * 5))
+        result = CompositionResult(
+            composed_prompt="What is 2+2?",
+            raw_xml="",
+        )
+        exec_result = await engine.execute(result)
+        assert exec_result.output
+
+    @pytest.mark.asyncio
+    async def test_single_call_with_default_only(self):
+        """Single-call only needs default — should pass."""
+        from promptspec.engines.single_call import SingleCallEngine
+        engine = SingleCallEngine(client=MockLLMClient(["ok"]))
+        result = CompositionResult(
+            composed_prompt="Hello",
+            raw_xml="",
+        )
+        exec_result = await engine.execute(result)
+        assert exec_result.output == "ok"

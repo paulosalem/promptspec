@@ -802,6 +802,12 @@ Directive Semantics:
 4. The entire directive is emitted as a JSON object in the `<execution>` section of the output XML.
 5. If no `@execute` directive is present, the `<execution>` section should contain an empty JSON object `{}`.
 6. If multiple `@execute` directives appear, the last one wins and a warning is emitted.
+7. **`@execute` implies required `@prompt` directives.** Each strategy type depends on specific named prompts being present in the spec. If the required `@prompt` blocks are missing, execution will fail. The required prompts per strategy are:
+   - `single-call`: `default` (the root prompt text — no `@prompt` directive needed)
+   - `self-consistency`: `default` (the root prompt text — no `@prompt` directive needed)
+   - `tree-of-thought`: **`generate`**, **`evaluate`**, **`synthesize`** (all three `@prompt` blocks are required)
+   - `reflection`: **`generate`**, **`critique`**, **`revise`** (all three `@prompt` blocks are required)
+8. When emitting `@execute` in the output, also emit a `<warnings>` entry if any required `@prompt` blocks for the declared strategy are missing from the spec.
 
 Example:
 ```

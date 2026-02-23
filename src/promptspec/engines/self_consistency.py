@@ -14,12 +14,15 @@ from .base import BaseEngine, ExecutionResult, RuntimeConfig
 class SelfConsistencyEngine(BaseEngine):
     """Run prompt N times and aggregate via voting or LLM judge."""
 
+    STRATEGY_CLASS = SelfConsistencyStrategy
+
     async def execute(
         self,
         result: CompositionResult,
         config: Optional[RuntimeConfig] = None,
         on_step: Optional[OnStepCallback] = None,
     ) -> ExecutionResult:
+        self._validate_prompts(result)
         strategy = SelfConsistencyStrategy()
         sr = await strategy.execute(
             result.prompts or {"default": result.composed_prompt},

@@ -14,12 +14,15 @@ from .base import BaseEngine, ExecutionResult, RuntimeConfig
 class SingleCallEngine(BaseEngine):
     """Default engine: one LLM call with the default prompt."""
 
+    STRATEGY_CLASS = SingleCallStrategy
+
     async def execute(
         self,
         result: CompositionResult,
         config: Optional[RuntimeConfig] = None,
         on_step: Optional[OnStepCallback] = None,
     ) -> ExecutionResult:
+        self._validate_prompts(result)
         strategy = SingleCallStrategy()
         sr = await strategy.execute(
             result.prompts or {"default": result.composed_prompt},

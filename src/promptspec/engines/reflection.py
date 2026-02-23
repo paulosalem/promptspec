@@ -14,12 +14,15 @@ from .base import BaseEngine, ExecutionResult, RuntimeConfig
 class ReflectionEngine(BaseEngine):
     """Generate → critique → revise loop engine."""
 
+    STRATEGY_CLASS = ReflectionStrategy
+
     async def execute(
         self,
         result: CompositionResult,
         config: Optional[RuntimeConfig] = None,
         on_step: Optional[OnStepCallback] = None,
     ) -> ExecutionResult:
+        self._validate_prompts(result)
         strategy = ReflectionStrategy()
         sr = await strategy.execute(
             result.prompts or {"default": result.composed_prompt},

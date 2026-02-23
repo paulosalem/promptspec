@@ -110,8 +110,37 @@ class Engine(Protocol):
 class BaseEngine:
     """Convenience base class for engines that delegate to ellements strategies."""
 
+    # Subclasses should set this to the strategy class they wrap.
+    STRATEGY_CLASS: Optional[type] = None
+
     def __init__(self, client: Optional[LLMClient] = None) -> None:
         self.client = client or LLMClient()
+
+    def _validate_prompts(self, result: CompositionResult) -> None:
+        """Check that the spec provides all prompts required by the strategy.
+
+        Raises ValueError with a clear message listing missing prompts.
+        """
+        if self.STRATEGY_CLASS is None:
+            return
+        required = getattr(self.STRATEGY_CLASS, "REQUIRED_PROMPTS", None)
+        if not required:
+            return
+
+        available = set(result.prompts.keys()) if result.prompts else {"default"}
+        # "default" is always available from composed_prompt
+        if result.composed_prompt:
+            available.add("default")
+
+        missing = [p for p in required if p not in available]
+        if missing:
+            strategy_name = self.STRATEGY_CLASS.__name__
+            raise ValueError(
+                f"{strategy_name} requires @prompt directives: "
+                f"{', '.join(required)}. "
+                f"Missing: {', '.join(missing)}. "
+                f"Available: {', '.join(sorted(available))}."
+            )
 
     def _build_strategy_config(
         self,
