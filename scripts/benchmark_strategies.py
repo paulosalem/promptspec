@@ -474,17 +474,20 @@ def main():
     print_section("Composing PromptSpec strategies")
     specs = asyncio.run(_compose_all_specs(args.specs, args.model))
 
-    # Reset litellm's internal logging worker so its asyncio.Queue doesn't
-    # stay bound to the now-dead composition event loop.  This prevents
+    # Disable litellm's async LoggingWorker entirely for the benchmark phase.
+    # It creates an asyncio.Queue bound to the composition event loop, which
+    # is dead by now.  Each asyncio.run() in strategy execution would trigger
     # "Queue is bound to a different event loop" RuntimeError noise.
+    # We don't need async logging during benchmarking.
     try:
-        from litellm.litellm_core_utils.logging_worker import LoggingWorker
-        import litellm
-        for attr in dir(litellm):
-            obj = getattr(litellm, attr, None)
-            if isinstance(obj, LoggingWorker):
-                obj._queue = None
-                obj._worker_task = None
+        import litellm.litellm_core_utils.logging_worker as _lw
+        _orig_start = _lw.LoggingWorker.start
+        _lw.LoggingWorker.start = lambda self: None
+        _lw.LoggingWorker.enqueue = lambda self, *a, **kw: None
+        _lw.LoggingWorker.ensure_initialized_and_enqueue = lambda self, *a, **kw: None
+        # Also reset the global singleton's stale queue
+        _lw.GLOBAL_LOGGING_WORKER._queue = None
+        _lw.GLOBAL_LOGGING_WORKER._worker_task = None
     except Exception:
         pass
 
