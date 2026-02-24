@@ -149,6 +149,7 @@ def create_benchmark_model(
     execution_config: Dict[str, Any],
     model: str,
     placeholder: str = "{{problem}}",
+    max_workers: int = 8,
 ):
     """Create a BenchmarkModel that uses composed PromptSpec prompts."""
     from ellements.core import LLMClient
@@ -182,7 +183,6 @@ def create_benchmark_model(
 
         def __init__(self):
             super().__init__()
-            self._sample_count = 0
             # Use sync litellm.completion directly to avoid event-loop issues.
             # litellm's async LoggingWorker binds a Queue to the first event
             # loop it sees; creating new loops later causes RuntimeError.
@@ -198,36 +198,29 @@ def create_benchmark_model(
             return resp.choices[0].message.content or ""
 
         def generate_until(self, requests: list) -> list[str]:
-            results: list[str] = []
             total = len(requests)
-            for req in requests:
-                self._sample_count += 1
+
+            # Print progress for all samples upfront
+            for i, req in enumerate(requests, 1):
+                context, _ = req.args
+                preview = context[:60].replace("\n", " ")
+                print_step("  ⏳", f"Sample {i}/{total}: {preview}…", "dim")
+
+            # Process a single request (used by both parallel and sequential paths)
+            def _process_one(idx: int, req) -> str:
                 context, gen_kwargs = req.args
                 stop_seqs = gen_kwargs.get("until", [])
 
-                # Show per-sample progress
-                preview = context[:60].replace("\n", " ")
-                print_step(
-                    "  ⏳",
-                    f"Sample {self._sample_count}/{total}: {preview}…",
-                    "dim",
-                )
-
-                # Fill prompt templates with the benchmark input
                 filled = {}
                 for key, template in prompts.items():
                     filled[key] = template.replace(placeholder, context)
 
                 if strategy is not None:
-                    # Ensure all required prompt keys exist for multi-prompt
-                    # strategies.  If composition produced only "default",
-                    # populate missing keys so the strategy can find them.
                     if hasattr(strategy, 'REQUIRED_PROMPTS'):
                         for rp in strategy.REQUIRED_PROMPTS:
                             if rp not in filled:
                                 filled[rp] = filled.get("default", context)
 
-                # Retry up to 3 times on transient errors (network hiccups, etc.)
                 output = None
                 for attempt in range(3):
                     try:
@@ -248,14 +241,14 @@ def create_benchmark_model(
                             wait = 5 * (attempt + 1)
                             print_step(
                                 "  ⚠️",
-                                f"Retry {attempt + 1}/3 in {wait}s: {type(e).__name__}",
+                                f"Retry {attempt + 1}/3 sample {idx + 1} in {wait}s: {type(e).__name__}",
                                 "yellow",
                             )
                             time.sleep(wait)
                         else:
                             print_step(
                                 "  ❌",
-                                f"Failed after 3 attempts: {type(e).__name__}: {e}",
+                                f"Sample {idx + 1} failed after 3 attempts: {type(e).__name__}: {e}",
                                 "red",
                             )
                             output = ""
@@ -264,14 +257,29 @@ def create_benchmark_model(
                     if stop in output:
                         output = output[: output.index(stop)]
 
-                results.append(output)
-            return results
+                return output
 
-        def loglikelihood(self, requests: list) -> list[tuple[float, bool]]:
-            return [(0.0, False) for _ in requests]
+            # Parallelise across samples using a thread pool.
+            # Each thread gets its own event loop (via asyncio.run) so there
+            # are no cross-thread loop conflicts.
+            from concurrent.futures import ThreadPoolExecutor, as_completed
 
-        def loglikelihood_rolling(self, requests: list) -> list[float]:
-            return [0.0 for _ in requests]
+            max_workers_actual = min(max_workers, total)  # cap to sample count
+            results: list[str | None] = [None] * total
+
+            with ThreadPoolExecutor(max_workers=max_workers_actual) as pool:
+                futures = {
+                    pool.submit(_process_one, i, req): i
+                    for i, req in enumerate(requests)
+                }
+                done_count = 0
+                for future in as_completed(futures):
+                    idx = futures[future]
+                    results[idx] = future.result()
+                    done_count += 1
+                    if done_count % 10 == 0 or done_count == total:
+                        print_step("  📊", f"Completed {done_count}/{total} samples", "cyan")
+
             return results
 
         def loglikelihood(self, requests: list) -> list[tuple[float, bool]]:
@@ -293,6 +301,7 @@ def run_benchmarks(
     model: str,
     limit: Optional[int] = None,
     num_fewshot: Optional[int] = None,
+    max_workers: int = 8,
 ) -> Dict[str, Dict[str, Any]]:
     """Run lm-eval benchmarks for each composed spec."""
     from lm_eval.evaluator import simple_evaluate
@@ -314,6 +323,7 @@ def run_benchmarks(
             prompts=spec_info["prompts"],
             execution_config=spec_info.get("execution", {}),
             model=model,
+            max_workers=max_workers,
         )
 
         t0 = time.perf_counter()
@@ -472,6 +482,12 @@ Examples:
         default=None,
         help="Save results to JSON file",
     )
+    parser.add_argument(
+        "--parallel", "-p",
+        type=int,
+        default=8,
+        help="Max parallel samples per strategy (default: 8). Set to 1 for sequential.",
+    )
 
     return parser.parse_args()
 
@@ -536,6 +552,7 @@ def main():
         model=args.model,
         limit=args.limit,
         num_fewshot=args.num_fewshot,
+        max_workers=args.parallel,
     )
 
     # ── Display results ───────────────────────────────────────────────

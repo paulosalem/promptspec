@@ -33,6 +33,7 @@ cd "$SCRIPT_DIR"
 LIMIT=40
 MODEL="openai/gpt-4o-mini"
 TASKS="gsm8k"
+PARALLEL=8
 
 # ── Parse arguments ──────────────────────────────────────────────────────
 
@@ -42,14 +43,16 @@ while [[ $# -gt 0 ]]; do
     --full)       LIMIT=""; shift ;;
     --model|-m)   MODEL="$2"; shift 2 ;;
     --tasks|-t)   TASKS="$2"; shift 2 ;;
+    --parallel|-p) PARALLEL="$2"; shift 2 ;;
     --help|-h)
-      echo "Usage: $0 [--limit N] [--full] [--model MODEL] [--tasks TASK]"
+      echo "Usage: $0 [--limit N] [--full] [--model MODEL] [--tasks TASK] [--parallel N]"
       echo ""
       echo "Options:"
-      echo "  --limit N, -l N   Limit to N samples per task (default: 10)"
-      echo "  --full            Run full benchmark (no limit)"
-      echo "  --model M, -m M   Model to use (default: openai/gpt-4o-mini)"
-      echo "  --tasks T, -t T   Benchmark task (default: gsm8k)"
+      echo "  --limit N, -l N      Limit to N samples per task (default: 40)"
+      echo "  --full               Run full benchmark (no limit)"
+      echo "  --model M, -m M      Model to use (default: openai/gpt-4o-mini)"
+      echo "  --tasks T, -t T      Benchmark task (default: gsm8k)"
+      echo "  --parallel N, -p N   Max parallel samples (default: 8)"
       echo ""
       echo "Example:"
       echo "  $0 --limit 20 --model openai/gpt-4o"
@@ -114,6 +117,7 @@ python scripts/benchmark_strategies.py \
   --tasks "$TASKS" \
   --model "$MODEL" \
   $LIMIT_FLAG \
+  --parallel "$PARALLEL" \
   --output benchmark-results.json
 
 echo ""
