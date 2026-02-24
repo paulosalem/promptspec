@@ -399,14 +399,20 @@ class TestTreeOfThoughtEngine:
     async def test_three_stage_pipeline(self):
         from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
 
-        responses = ["Approach A, B, C", "B is best", "Detailed solution B"]
+        responses = [
+            "Path A solution",          # generate_0
+            "Path B solution",          # generate_1
+            "Path C solution",          # generate_2
+            "Path B is best",           # evaluate
+            "Detailed solution B",      # synthesize
+        ]
         client = MockLLMClient(responses)
         engine = TreeOfThoughtEngine(client=client)
 
         result_cr = CompositionResult(
             composed_prompt="shared context",
             prompts={
-                "generate": "Generate {{branching_factor}} approaches",
+                "generate": "Solve the problem",
                 "evaluate": "Evaluate: {{candidates}}",
                 "synthesize": "Elaborate: {{best_approach}}",
             },
@@ -415,8 +421,8 @@ class TestTreeOfThoughtEngine:
         exec_result = await engine.execute(result_cr)
 
         assert exec_result.output == "Detailed solution B"
-        assert len(client.calls) == 3
-        assert len(exec_result.steps) == 3
+        assert len(client.calls) == 5  # 3 generate + evaluate + synthesize
+        assert len(exec_result.steps) == 5
 
     @pytest.mark.asyncio
     async def test_config_override(self):
@@ -424,14 +430,14 @@ class TestTreeOfThoughtEngine:
         from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
         from promptspec.engines.base import RuntimeConfig
 
-        responses = ["ideas", "eval", "synth"]
+        responses = ["g1", "g2", "g3", "g4", "g5", "eval", "synth"]
         client = MockLLMClient(responses)
         engine = TreeOfThoughtEngine(client=client)
 
         result_cr = CompositionResult(
             composed_prompt="ctx",
             prompts={
-                "generate": "Gen {{branching_factor}}",
+                "generate": "Solve it",
                 "evaluate": "Eval {{candidates}}",
                 "synthesize": "Synth {{best_approach}}",
             },
@@ -443,9 +449,9 @@ class TestTreeOfThoughtEngine:
         )
         exec_result = await engine.execute(result_cr, runtime_config)
 
-        # The generate prompt should have "5" (from runtime override)
-        gen_prompt = client.calls[0]["messages"][-1]["content"]
-        assert "5" in gen_prompt
+        # With branching_factor=5, there should be 5 generate calls
+        gen_calls = [c for c in client.calls if c["temperature"] == 0.9]
+        assert len(gen_calls) == 5
 
 
 class TestReflectionEngine:

@@ -1,22 +1,36 @@
 # Tree of Thought Solver
 
+@note
+  Tree of Thoughts (Yao et al., 2023) generalizes Chain-of-Thought by
+  exploring multiple reasoning paths and using deliberate evaluation to
+  select the most promising one. Unlike CoT's single left-to-right pass,
+  ToT generates N independent solution attempts in parallel, then
+  evaluates them for correctness before synthesizing the final answer.
+
+  Our implementation is a simplified "generate → evaluate → synthesize"
+  variant: each branch is a full independent solution (not an
+  incremental thought step), keeping the core benefit — diverse parallel
+  exploration with self-evaluation — while avoiding the complexity of
+  recursive tree search with backtracking.
+
+  References:
+  - Yao et al. (2023). "Tree of Thoughts: Deliberate Problem Solving
+    with Large Language Models." NeurIPS 2023. arXiv:2305.10601
+
 @execute tree-of-thought
   branching_factor: 3
 
-@prompt system
-  You are a rigorous problem solver. Explore multiple reasoning paths,
-  evaluate which is most sound, and deliver the best answer.
+You are a rigorous problem solver. Explore multiple reasoning paths,
+evaluate which is most sound, and deliver the best answer.
+
+Problem: {{problem}}
 
 @prompt generate
-  Problem: {{problem}}
-
   Solve this problem step by step, showing your calculations and logic
   clearly. Work through each step carefully and arrive at a concrete
   final answer.
 
 @prompt evaluate
-  Original problem: {{problem}}
-
   Here are several candidate solutions:
 
   {{candidates}}

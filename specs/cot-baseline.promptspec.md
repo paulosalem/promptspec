@@ -1,25 +1,32 @@
 # Chain of Thought Baseline
 
+@note
+  Zero-shot Chain-of-Thought prompting. Rather than providing few-shot
+  exemplars with reasoning traces (Wei et al., 2022), this spec uses
+  explicit step-by-step instructions in the style of Kojima et al. (2022),
+  who showed that simply eliciting intermediate reasoning steps from the
+  model ("Let's think step by step") significantly improves accuracy on
+  arithmetic, commonsense, and symbolic reasoning tasks.
+
+  References:
+  - Wei et al. (2022). "Chain-of-Thought Prompting Elicits Reasoning in
+    Large Language Models." NeurIPS 2022. arXiv:2201.11903
+  - Kojima et al. (2022). "Large Language Models are Zero-Shot Reasoners."
+    NeurIPS 2022. arXiv:2205.11916
+
 @execute single-call
 
-Before answering, you must reason through the problem step by step. Never
-jump to a conclusion without showing the chain of thought that leads to it.
+Think step by step. Before answering, reason through the problem
+carefully. Never jump to a conclusion without showing your work.
 
 ## Problem
 
 {{problem}}
 
-## Reasoning Process
+## Instructions
 
-Follow these stages in order:
-
-### 1. Understand
-Restate the core question in your own words. Identify what is being asked.
-
-### 2. Reason
 Work through the problem one logical step at a time:
-- State what you are doing and why.
-- Show the reasoning or evidence that supports it.
-
-### 3. Answer
-State your final answer clearly, prefixed with "ANSWER: ".
+- State what you are calculating and why at each step.
+- Show the arithmetic or reasoning clearly.
+- After completing all steps, state your final answer on its own line,
+  prefixed with "ANSWER: ".

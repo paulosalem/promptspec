@@ -174,6 +174,89 @@ def _parse_json_object(block: str, tag_name: str) -> Dict[str, Any]:
         return {}
 
 
+def _extract_root_text(spec_text: str) -> tuple:
+    """Extract root prefix and suffix from a spec.
+
+    Prefix = everything from start to first ``@prompt``, with the
+    ``@execute`` block (line + indented params) stripped.
+    Suffix = everything after the last ``@prompt`` block ends.
+
+    Returns ``(prefix, suffix)`` — both may be empty strings.
+    """
+    lines = spec_text.split("\n")
+
+    # Find indices of @prompt directives
+    prompt_indices: List[int] = []
+    for i, line in enumerate(lines):
+        if re.match(r"^@prompt\b", line.strip()):
+            prompt_indices.append(i)
+
+    if not prompt_indices:
+        return ("", "")
+
+    # --- Prefix: lines 0 .. first_prompt-1, minus @execute block ---
+    first_prompt = prompt_indices[0]
+    prefix_lines: List[str] = []
+    i = 0
+    while i < first_prompt:
+        stripped = lines[i].strip()
+        if stripped.startswith("@execute"):
+            # Skip the @execute line and any indented continuation lines
+            i += 1
+            while i < first_prompt and lines[i] and lines[i][0] in (" ", "\t"):
+                i += 1
+            continue
+        prefix_lines.append(lines[i])
+        i += 1
+
+    # --- Suffix: lines after the last @prompt block ---
+    last_prompt = prompt_indices[-1]
+    # The @prompt block extends until next @prompt or EOF.
+    # Find where the last @prompt's content ends:
+    # it's all indented lines after the @prompt line.
+    j = last_prompt + 1
+    while j < len(lines):
+        line = lines[j]
+        # A non-empty, non-indented line that isn't blank means
+        # the block ended (new top-level content = suffix).
+        if line and not line[0].isspace():
+            break
+        j += 1
+    suffix_lines = lines[j:] if j < len(lines) else []
+
+    prefix = "\n".join(prefix_lines).strip()
+    suffix = "\n".join(suffix_lines).strip()
+    return (prefix, suffix)
+
+
+def _cascade_root_context(
+    prompts: Dict[str, str],
+    prefix: str,
+    suffix: str,
+) -> Dict[str, str]:
+    """Prepend prefix and append suffix to each named prompt.
+
+    Skips cascading for single-call specs (only ``"default"`` key) and
+    does nothing if both prefix and suffix are empty.
+    """
+    if not prefix and not suffix:
+        return prompts
+    # Single-call specs: root text is already the entire prompt
+    if list(prompts.keys()) == ["default"]:
+        return prompts
+
+    result: Dict[str, str] = {}
+    for name, text in prompts.items():
+        parts = []
+        if prefix:
+            parts.append(prefix)
+        parts.append(text)
+        if suffix:
+            parts.append(suffix)
+        result[name] = "\n\n".join(parts)
+    return result
+
+
 def parse_composition_xml(raw: str) -> CompositionResult:
     """Parse the XML-structured LLM output into a CompositionResult.
 
@@ -394,6 +477,11 @@ class PromptSpecController:
         result = parse_composition_xml(response.content)
         result.tool_calls_made = len(response.tool_calls_made)
         result.transitions = transitions
+
+        # Cascade root text (prefix/suffix) into each named prompt
+        prefix, suffix = _extract_root_text(spec_text)
+        if result.prompts and (prefix or suffix):
+            result.prompts = _cascade_root_context(result.prompts, prefix, suffix)
 
         # Emit individual issues so verbose UI shows them inline
         for issue in result.issues:
