@@ -1,15 +1,21 @@
-// PromptSpec — VS Code decoration provider
+// PromptSpec — VS Code extension
 //
-// Adds visual embellishments to .promptspec.md files:
-//   • @execute lines  — gold left border + subtle background
-//   • @prompt blocks   — blue left border + subtle background
-//   • @tool lines      — teal left border
-//   • @match / @if     — pink left border
-//   • match cases (==>) — green left accent
-//   • @note blocks     — dimmed background + dotted border
-//   • {{variables}}    — subtle orange background pill
+// Features:
+//   • Visual decorations (borders, backgrounds, variable pills)
+//   • Completions for directives, parameters, variables, file paths
+//   • Hover documentation for directives, variables, strategies
+//   • Diagnostics (unknown directives, unclosed {{, missing files)
+//   • Go-to-definition for @refine file references
+//   • Document symbols (Outline view & breadcrumbs)
+//   • Smart folding for directive blocks
 
 const vscode = require("vscode");
+const { PromptSpecCompletionProvider, TRIGGER_CHARACTERS } = require("./completions");
+const { PromptSpecHoverProvider } = require("./hovers");
+const { createDiagnosticsProvider } = require("./diagnostics");
+const { PromptSpecDefinitionProvider } = require("./definitions");
+const { PromptSpecDocumentSymbolProvider } = require("./symbols");
+const { PromptSpecFoldingRangeProvider } = require("./folding");
 
 // ── Decoration types ────────────────────────────────────────────
 
@@ -195,21 +201,20 @@ function updateDecorations(editor, decs) {
 
 /** @param {vscode.ExtensionContext} context */
 function activate(context) {
+  const selector = { language: "promptspec", scheme: "file" };
   const decs = createDecorations();
 
-  // Decorate active editor on startup
+  // ── Decorations ────────────────────────────────────────────
   if (vscode.window.activeTextEditor) {
     updateDecorations(vscode.window.activeTextEditor, decs);
   }
 
-  // Re-decorate when switching editors
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) updateDecorations(editor, decs);
     })
   );
 
-  // Re-decorate on document changes (debounced)
   let timeout;
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((event) => {
@@ -221,9 +226,38 @@ function activate(context) {
     })
   );
 
-  // Clean up decoration types on deactivate
+  context.subscriptions.push(...Object.values(decs));
+
+  // ── Completions ────────────────────────────────────────────
   context.subscriptions.push(
-    ...Object.values(decs)
+    vscode.languages.registerCompletionItemProvider(
+      selector,
+      new PromptSpecCompletionProvider(),
+      ...TRIGGER_CHARACTERS
+    )
+  );
+
+  // ── Hovers ─────────────────────────────────────────────────
+  context.subscriptions.push(
+    vscode.languages.registerHoverProvider(selector, new PromptSpecHoverProvider())
+  );
+
+  // ── Diagnostics ────────────────────────────────────────────
+  createDiagnosticsProvider(context);
+
+  // ── Go-to-definition ──────────────────────────────────────
+  context.subscriptions.push(
+    vscode.languages.registerDefinitionProvider(selector, new PromptSpecDefinitionProvider())
+  );
+
+  // ── Document symbols (Outline) ────────────────────────────
+  context.subscriptions.push(
+    vscode.languages.registerDocumentSymbolProvider(selector, new PromptSpecDocumentSymbolProvider())
+  );
+
+  // ── Folding ────────────────────────────────────────────────
+  context.subscriptions.push(
+    vscode.languages.registerFoldingRangeProvider(selector, new PromptSpecFoldingRangeProvider())
   );
 }
 

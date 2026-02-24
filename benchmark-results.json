@@ -1,0 +1,26 @@
+{
+  "model": "openai/gpt-4o-mini",
+  "tasks": [
+    "gsm8k"
+  ],
+  "scores": {
+    "Cot Baseline": {
+      "gsm8k/exact_match,strict-match": 0.0,
+      "gsm8k/exact_match_stderr,strict-match": 0.0,
+      "gsm8k/exact_match,flexible-extract": 0.9,
+      "gsm8k/exact_match_stderr,flexible-extract": 0.1
+    },
+    "Self Consistency Solver": {
+      "gsm8k/exact_match,strict-match": 0.0,
+      "gsm8k/exact_match_stderr,strict-match": 0.0,
+      "gsm8k/exact_match,flexible-extract": 0.7,
+      "gsm8k/exact_match_stderr,flexible-extract": 0.1528
+    },
+    "Tree Of Thought Solver": {
+      "gsm8k/exact_match,strict-match": 0.0,
+      "gsm8k/exact_match_stderr,strict-match": 0.0,
+      "gsm8k/exact_match,flexible-extract": 0.0,
+      "gsm8k/exact_match_stderr,flexible-extract": 0.0
+    }
+  }
+}

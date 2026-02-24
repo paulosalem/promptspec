@@ -1,8 +1,8 @@
 {
   "name": "promptspec",
   "displayName": "PromptSpec Syntax",
-  "description": "Syntax highlighting and visual decorations for PromptSpec specification files (.promptspec.md) — directives, variables, match cases, and more.",
-  "version": "0.2.0",
+  "description": "Full language support for PromptSpec specification files (.promptspec.md) — completions, hover docs, diagnostics, go-to-definition, outline, and visual decorations.",
+  "version": "0.3.0",
   "publisher": "prompting-adventures",
   "license": "MIT",
   "repository": {
