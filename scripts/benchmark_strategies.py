@@ -213,8 +213,109 @@ def create_benchmark_model(
         def generate_until(self, requests: list) -> list[str]:
             total = len(requests)
 
-            # Process a single request.  Each thread creates ONE event loop
-            # and reuses it for all retries, then closes it cleanly.
+            # Process a single request (async).
+            async def _process_one_async(idx: int, req, sem: asyncio.Semaphore) -> str:
+                async with sem:
+                    context, gen_kwargs = req.args
+                    stop_seqs = gen_kwargs.get("until", [])
+
+                    filled = {}
+                    for key, template in prompts.items():
+                        filled[key] = template.replace(placeholder, context)
+
+                    if strategy is not None:
+                        if hasattr(strategy, 'REQUIRED_PROMPTS'):
+                            for rp in strategy.REQUIRED_PROMPTS:
+                                if rp not in filled:
+                                    filled[rp] = filled.get("default", context)
+
+                    output = None
+                    for attempt in range(5):
+                        try:
+                            if strategy is not None:
+                                result = await asyncio.wait_for(
+                                    strategy.execute(
+                                        prompts=filled,
+                                        client=LLMClient(default_model=model_name),
+                                        config=strategy_config,
+                                    ),
+                                    timeout=300,
+                                )
+                                output = result.output
+                            else:
+                                prompt_text = filled.get("default", context)
+                                output = self._sync_complete(prompt_text)
+                            break
+                        except Exception as e:
+                            if attempt < 4:
+                                wait = [10, 30, 60, 120][attempt]
+                                print_step(
+                                    "  ⚠️",
+                                    f"Retry {attempt + 1}/5 sample {idx + 1} in {wait}s: {type(e).__name__}",
+                                    "yellow",
+                                )
+                                await asyncio.sleep(wait)
+                            else:
+                                print_step(
+                                    "  ❌",
+                                    f"Sample {idx + 1} failed after 5 attempts: {type(e).__name__}: {e}",
+                                    "red",
+                                )
+                                output = ""
+
+                    for stop in stop_seqs:
+                        if stop in output:
+                            output = output[: output.index(stop)]
+
+                    return output
+
+            if strategy is not None:
+                # Run ALL strategy samples through a single event loop with
+                # a semaphore for concurrency control.  This shares aiohttp
+                # connections properly and avoids socket/FD exhaustion.
+                effective_workers = min(max_workers, 2)
+                max_workers_actual = min(effective_workers, total)
+
+                async def _run_all_strategy():
+                    sem = asyncio.Semaphore(max_workers_actual)
+                    done_count_box = [0]  # mutable counter
+
+                    async def _tracked(idx, req):
+                        output = await _process_one_async(idx, req, sem)
+                        done_count_box[0] += 1
+                        answer_preview = (output or "").replace("\n", " ").strip()
+                        if len(answer_preview) > 120:
+                            answer_preview = answer_preview[:117] + "..."
+                        print_step(
+                            "  ✔",
+                            f"[{done_count_box[0]}/{total}] Sample {idx + 1}: {answer_preview or '(empty)'}",
+                            "dim",
+                        )
+                        return output
+
+                    return list(await asyncio.gather(
+                        *[_tracked(i, req) for i, req in enumerate(requests)]
+                    ))
+
+                loop = asyncio.new_event_loop()
+                try:
+                    results = loop.run_until_complete(_run_all_strategy())
+                finally:
+                    try:
+                        loop.run_until_complete(loop.shutdown_asyncgens())
+                    except Exception:
+                        pass
+                    try:
+                        _cancel_pending(loop)
+                    except Exception:
+                        pass
+                    loop.close()
+                    import gc
+                    gc.collect()
+
+                return results
+
+            # ── Non-strategy (single-call) path: use thread pool ──────
             def _process_one(idx: int, req) -> str:
                 context, gen_kwargs = req.args
                 stop_seqs = gen_kwargs.get("until", [])
@@ -223,64 +324,8 @@ def create_benchmark_model(
                 for key, template in prompts.items():
                     filled[key] = template.replace(placeholder, context)
 
-                if strategy is not None:
-                    if hasattr(strategy, 'REQUIRED_PROMPTS'):
-                        for rp in strategy.REQUIRED_PROMPTS:
-                            if rp not in filled:
-                                filled[rp] = filled.get("default", context)
-
-                output = None
-                # Create one event loop for this sample's retries
-                loop = asyncio.new_event_loop() if strategy is not None else None
-                try:
-                    for attempt in range(5):
-                        try:
-                            if strategy is not None:
-                                coro = asyncio.wait_for(
-                                    strategy.execute(
-                                        prompts=filled,
-                                        client=LLMClient(default_model=model_name),
-                                        config=strategy_config,
-                                    ),
-                                    timeout=300,
-                                )
-                                output = loop.run_until_complete(coro).output
-                            else:
-                                prompt_text = filled.get("default", context)
-                                output = self._sync_complete(prompt_text)
-                            break
-                        except Exception as e:
-                            if attempt < 4:
-                                # Exponential backoff: 10s, 30s, 60s, 120s
-                                wait = [10, 30, 60, 120][attempt]
-                                print_step(
-                                    "  ⚠️",
-                                    f"Retry {attempt + 1}/5 sample {idx + 1} in {wait}s: {type(e).__name__}",
-                                    "yellow",
-                                )
-                                time.sleep(wait)
-                            else:
-                                print_step(
-                                    "  ❌",
-                                    f"Sample {idx + 1} failed after 5 attempts: {type(e).__name__}: {e}",
-                                    "red",
-                                )
-                                output = ""
-                finally:
-                    if loop is not None:
-                        # Properly clean up aiohttp sessions and async generators
-                        # before closing the loop — prevents socket/FD leaks.
-                        try:
-                            loop.run_until_complete(loop.shutdown_asyncgens())
-                        except Exception:
-                            pass
-                        try:
-                            _cancel_pending(loop)
-                        except Exception:
-                            pass
-                        loop.close()
-                    import gc
-                    gc.collect()
+                prompt_text = filled.get("default", context)
+                output = self._sync_complete(prompt_text)
 
                 for stop in stop_seqs:
                     if stop in output:
@@ -288,16 +333,9 @@ def create_benchmark_model(
 
                 return output
 
-            # Parallelise across samples using a thread pool.
-            # Each thread reuses one event loop per sample, avoiding FD leaks.
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
-            # Cap concurrency for multi-step strategies to avoid API rate limits.
-            # ToT = 3 calls/sample, so 2 workers = 6 concurrent API calls.
-            effective_workers = max_workers
-            if strategy is not None:
-                effective_workers = min(max_workers, 2)
-            max_workers_actual = min(effective_workers, total)
+            max_workers_actual = min(max_workers, total)
             results: list[str | None] = [None] * total
 
             with ThreadPoolExecutor(max_workers=max_workers_actual) as pool:
