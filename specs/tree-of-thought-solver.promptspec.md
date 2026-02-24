@@ -10,14 +10,9 @@
 @prompt generate
   Problem: {{problem}}
 
-  Solve this problem using {{branching_factor}} independent reasoning
-  paths. For each path, work through the problem step by step from scratch,
-  showing your calculations and logic clearly.
-
-  Label each path (Path 1, Path 2, Path 3, etc.) and arrive at a concrete
-  final answer at the end of each one. Take genuinely different angles —
-  vary the order of operations, groupings, or intermediate steps so the
-  paths are not trivial rewordings of each other.
+  Solve this problem step by step, showing your calculations and logic
+  clearly. Work through each step carefully and arrive at a concrete
+  final answer.
 
 @prompt evaluate
   Original problem: {{problem}}
