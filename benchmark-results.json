@@ -4,23 +4,23 @@
     "gsm8k"
   ],
   "scores": {
-    "Cot Baseline": {
+    "Chain Of Thought": {
       "gsm8k/exact_match,strict-match": 0.0,
       "gsm8k/exact_match_stderr,strict-match": 0.0,
-      "gsm8k/exact_match,flexible-extract": 0.825,
-      "gsm8k/exact_match_stderr,flexible-extract": 0.0608
+      "gsm8k/exact_match,flexible-extract": 0.85,
+      "gsm8k/exact_match_stderr,flexible-extract": 0.0572
     },
     "Self Consistency Solver": {
       "gsm8k/exact_match,strict-match": 0.0,
       "gsm8k/exact_match_stderr,strict-match": 0.0,
-      "gsm8k/exact_match,flexible-extract": 0.825,
-      "gsm8k/exact_match_stderr,flexible-extract": 0.0608
+      "gsm8k/exact_match,flexible-extract": 0.925,
+      "gsm8k/exact_match_stderr,flexible-extract": 0.0422
     },
     "Tree Of Thought Solver": {
-      "gsm8k/exact_match,strict-match": 0.0,
-      "gsm8k/exact_match_stderr,strict-match": 0.0,
-      "gsm8k/exact_match,flexible-extract": 0.0,
-      "gsm8k/exact_match_stderr,flexible-extract": 0.0
+      "gsm8k/exact_match,strict-match": 0.2,
+      "gsm8k/exact_match_stderr,strict-match": 0.0641,
+      "gsm8k/exact_match,flexible-extract": 0.775,
+      "gsm8k/exact_match_stderr,flexible-extract": 0.0669
     }
   }
 }
