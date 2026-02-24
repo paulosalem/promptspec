@@ -201,12 +201,6 @@ def create_benchmark_model(
         def generate_until(self, requests: list) -> list[str]:
             total = len(requests)
 
-            # Print progress for all samples upfront
-            for i, req in enumerate(requests, 1):
-                context, _ = req.args
-                preview = context[:60].replace("\n", " ")
-                print_step("  ⏳", f"Sample {i}/{total}: {preview}…", "dim")
-
             # Process a single request.  Each thread creates ONE event loop
             # and reuses it for all retries, then closes it cleanly.
             def _process_one(idx: int, req) -> str:
@@ -290,10 +284,18 @@ def create_benchmark_model(
                 done_count = 0
                 for future in as_completed(futures):
                     idx = futures[future]
-                    results[idx] = future.result()
+                    output = future.result()
+                    results[idx] = output
                     done_count += 1
-                    if done_count % 10 == 0 or done_count == total:
-                        print_step("  📊", f"Completed {done_count}/{total} samples", "cyan")
+                    # Show truncated answer for each completed sample
+                    answer_preview = (output or "").replace("\n", " ").strip()
+                    if len(answer_preview) > 120:
+                        answer_preview = answer_preview[:117] + "..."
+                    print_step(
+                        "  ✔",
+                        f"[{done_count}/{total}] Sample {idx + 1}: {answer_preview or '(empty)'}",
+                        "dim",
+                    )
 
             return results
 
