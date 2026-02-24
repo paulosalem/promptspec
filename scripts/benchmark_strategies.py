@@ -207,7 +207,8 @@ def create_benchmark_model(
                 preview = context[:60].replace("\n", " ")
                 print_step("  ⏳", f"Sample {i}/{total}: {preview}…", "dim")
 
-            # Process a single request (used by both parallel and sequential paths)
+            # Process a single request.  Each thread creates ONE event loop
+            # and reuses it for all retries, then closes it cleanly.
             def _process_one(idx: int, req) -> str:
                 context, gen_kwargs = req.args
                 stop_seqs = gen_kwargs.get("until", [])
@@ -223,12 +224,13 @@ def create_benchmark_model(
                                 filled[rp] = filled.get("default", context)
 
                 output = None
-                for attempt in range(3):
-                    try:
-                        if strategy is not None:
-                            # Timeout: 5 min per sample (ToT = 3 sequential calls)
-                            async def _run_with_timeout():
-                                return await asyncio.wait_for(
+                # Create one event loop for this sample's retries
+                loop = asyncio.new_event_loop() if strategy is not None else None
+                try:
+                    for attempt in range(3):
+                        try:
+                            if strategy is not None:
+                                coro = asyncio.wait_for(
                                     strategy.execute(
                                         prompts=filled,
                                         client=LLMClient(default_model=model_name),
@@ -236,27 +238,30 @@ def create_benchmark_model(
                                     ),
                                     timeout=300,
                                 )
-                            output = asyncio.run(_run_with_timeout()).output
-                        else:
-                            prompt_text = filled.get("default", context)
-                            output = self._sync_complete(prompt_text)
-                        break
-                    except Exception as e:
-                        if attempt < 2:
-                            wait = 5 * (attempt + 1)
-                            print_step(
-                                "  ⚠️",
-                                f"Retry {attempt + 1}/3 sample {idx + 1} in {wait}s: {type(e).__name__}",
-                                "yellow",
-                            )
-                            time.sleep(wait)
-                        else:
-                            print_step(
-                                "  ❌",
-                                f"Sample {idx + 1} failed after 3 attempts: {type(e).__name__}: {e}",
-                                "red",
-                            )
-                            output = ""
+                                output = loop.run_until_complete(coro).output
+                            else:
+                                prompt_text = filled.get("default", context)
+                                output = self._sync_complete(prompt_text)
+                            break
+                        except Exception as e:
+                            if attempt < 2:
+                                wait = 5 * (attempt + 1)
+                                print_step(
+                                    "  ⚠️",
+                                    f"Retry {attempt + 1}/3 sample {idx + 1} in {wait}s: {type(e).__name__}",
+                                    "yellow",
+                                )
+                                time.sleep(wait)
+                            else:
+                                print_step(
+                                    "  ❌",
+                                    f"Sample {idx + 1} failed after 3 attempts: {type(e).__name__}: {e}",
+                                    "red",
+                                )
+                                output = ""
+                finally:
+                    if loop is not None:
+                        loop.close()
 
                 for stop in stop_seqs:
                     if stop in output:
@@ -265,11 +270,14 @@ def create_benchmark_model(
                 return output
 
             # Parallelise across samples using a thread pool.
-            # Each thread gets its own event loop (via asyncio.run) so there
-            # are no cross-thread loop conflicts.
+            # Each thread reuses one event loop per sample, avoiding FD leaks.
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
-            max_workers_actual = min(max_workers, total)  # cap to sample count
+            # Cap concurrency lower for multi-step strategies to avoid FD exhaustion
+            effective_workers = max_workers
+            if strategy is not None:
+                effective_workers = min(max_workers, 4)
+            max_workers_actual = min(effective_workers, total)
             results: list[str | None] = [None] * total
 
             with ThreadPoolExecutor(max_workers=max_workers_actual) as pool:
