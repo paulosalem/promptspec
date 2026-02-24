@@ -73,6 +73,9 @@ if ! python -c "import lm_eval" 2>/dev/null; then
   exit 1
 fi
 
+# Use cached datasets without hitting HF Hub (avoids noisy warnings)
+export HF_DATASETS_OFFLINE=1
+
 # ── Build limit flag ─────────────────────────────────────────────────────
 
 LIMIT_FLAG=""
