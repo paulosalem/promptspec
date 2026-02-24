@@ -227,18 +227,38 @@ def create_benchmark_model(
                             if rp not in filled:
                                 filled[rp] = filled.get("default", context)
 
-                    # Multi-step strategies are async — run in a fresh loop
-                    # per call to avoid litellm's LoggingWorker queue conflicts.
-                    output = asyncio.run(
-                        strategy.execute(
-                            prompts=filled,
-                            client=LLMClient(default_model=model_name),
-                            config=strategy_config,
-                        )
-                    ).output
-                else:
-                    prompt_text = filled.get("default", context)
-                    output = self._sync_complete(prompt_text)
+                # Retry up to 3 times on transient errors (network hiccups, etc.)
+                output = None
+                for attempt in range(3):
+                    try:
+                        if strategy is not None:
+                            output = asyncio.run(
+                                strategy.execute(
+                                    prompts=filled,
+                                    client=LLMClient(default_model=model_name),
+                                    config=strategy_config,
+                                )
+                            ).output
+                        else:
+                            prompt_text = filled.get("default", context)
+                            output = self._sync_complete(prompt_text)
+                        break
+                    except Exception as e:
+                        if attempt < 2:
+                            wait = 5 * (attempt + 1)
+                            print_step(
+                                "  ⚠️",
+                                f"Retry {attempt + 1}/3 in {wait}s: {type(e).__name__}",
+                                "yellow",
+                            )
+                            time.sleep(wait)
+                        else:
+                            print_step(
+                                "  ❌",
+                                f"Failed after 3 attempts: {type(e).__name__}: {e}",
+                                "red",
+                            )
+                            output = ""
 
                 for stop in stop_seqs:
                     if stop in output:
