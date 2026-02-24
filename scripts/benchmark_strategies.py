@@ -32,6 +32,18 @@ from typing import Any, Dict, List, Optional
 # async logging worker when we run strategies in fresh event loops.
 warnings.filterwarnings("ignore", message="coroutine.*was never awaited")
 
+
+def _cancel_pending(loop: asyncio.AbstractEventLoop) -> None:
+    """Cancel all pending tasks on a loop to release their resources."""
+    try:
+        pending = asyncio.all_tasks(loop)
+    except RuntimeError:
+        return
+    for task in pending:
+        task.cancel()
+    if pending:
+        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+
 # ---------------------------------------------------------------------------
 # Ensure the project is importable
 # ---------------------------------------------------------------------------
@@ -256,7 +268,19 @@ def create_benchmark_model(
                                 output = ""
                 finally:
                     if loop is not None:
+                        # Properly clean up aiohttp sessions and async generators
+                        # before closing the loop — prevents socket/FD leaks.
+                        try:
+                            loop.run_until_complete(loop.shutdown_asyncgens())
+                        except Exception:
+                            pass
+                        try:
+                            _cancel_pending(loop)
+                        except Exception:
+                            pass
                         loop.close()
+                    import gc
+                    gc.collect()
 
                 for stop in stop_seqs:
                     if stop in output:
