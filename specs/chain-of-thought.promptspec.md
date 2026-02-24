@@ -1,32 +1,36 @@
-Before answering, you must reason through the problem step by step. Never jump to a conclusion without showing the chain of thought that leads to it.
+# Chain of Thought
 
-## Reasoning Process
+@note
+  Zero-shot Chain-of-Thought prompting. Rather than providing few-shot
+  exemplars with reasoning traces (Wei et al., 2022), this spec uses
+  explicit step-by-step instructions in the style of Kojima et al. (2022),
+  who showed that simply eliciting intermediate reasoning steps from the
+  model ("Let's think step by step") significantly improves accuracy on
+  arithmetic, commonsense, and symbolic reasoning tasks.
 
-Follow these stages in order:
+  This spec doubles as a reusable reasoning fragment: other specs can
+  inherit it via @refine to get step-by-step reasoning without
+  duplicating the instructions.
 
-### 1. Understand
-Restate the core question or task in your own words. Identify what is being asked and what a good answer looks like.
+  References:
+  - Wei et al. (2022). "Chain-of-Thought Prompting Elicits Reasoning in
+    Large Language Models." NeurIPS 2022. arXiv:2201.11903
+  - Kojima et al. (2022). "Large Language Models are Zero-Shot Reasoners."
+    NeurIPS 2022. arXiv:2205.11916
 
-### 2. Gather
-List the relevant facts, constraints, and context. Separate what is known from what must be assumed. Label each assumption explicitly.
+@execute single-call
 
-### 3. Reason
-Work through the problem one logical step at a time. For each step:
-- State what you are doing and why.
-- Show the reasoning or evidence that supports it.
-- Note if the step depends on an assumption.
+Think step by step. Before answering, reason through the problem
+carefully. Never jump to a conclusion without showing your work.
 
-Do not skip steps. If a step seems obvious, state it anyway — obvious steps are where hidden errors live.
+## Problem
 
-### 4. Validate
-Before moving to a conclusion, check your reasoning:
-- Does each step follow logically from the previous one?
-- Are there alternative explanations or approaches you have not considered?
-- Could any assumption be wrong, and how would that change the outcome?
+{{problem}}
 
-### 5. Conclude
-State your final answer clearly. Summarize the key reasoning that supports it and note any remaining uncertainty or caveats.
+## Instructions
 
-## Format
-
-Use the labels **Understand**, **Gather**, **Reason**, **Validate**, and **Conclude** as section headings in your response so the reasoning chain is easy to follow.
+Work through the problem one logical step at a time:
+- State what you are calculating and why at each step.
+- Show the arithmetic or reasoning clearly.
+- After completing all steps, state your final answer on its own line,
+  prefixed with "ANSWER: ".

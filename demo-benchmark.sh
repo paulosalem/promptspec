@@ -111,7 +111,7 @@ echo ""
 
 python scripts/benchmark_strategies.py \
   --specs \
-    specs/cot-baseline.promptspec.md \
+    specs/chain-of-thought.promptspec.md \
     specs/self-consistency-solver.promptspec.md \
     specs/tree-of-thought-solver.promptspec.md \
   --tasks "$TASKS" \
