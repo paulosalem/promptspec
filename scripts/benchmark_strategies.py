@@ -146,7 +146,6 @@ def create_benchmark_model(
     placeholder: str = "{{problem}}",
 ):
     """Create a BenchmarkModel that uses composed PromptSpec prompts."""
-    from ellements.benchmarking.harness import BenchmarkModel, _run_async
     from ellements.core import LLMClient
     from lm_eval.api.model import LM
 
@@ -174,17 +173,41 @@ def create_benchmark_model(
         if strategy_cls:
             strategy = strategy_cls()
 
+    # A dedicated event loop in a background thread, shared across all calls
+    # to avoid creating/destroying thread pools per request (which deadlocks).
+    import threading
+    import concurrent.futures
+
+    _loop = asyncio.new_event_loop()
+    _thread = threading.Thread(target=_loop.run_forever, daemon=True)
+    _thread.start()
+
+    def _run_in_loop(coro):
+        """Submit a coroutine to the shared background loop and wait."""
+        future = asyncio.run_coroutine_threadsafe(coro, _loop)
+        return future.result()
+
     class PromptSpecBenchmarkModel(LM):
         """LM adapter that fills prompt templates with benchmark inputs."""
 
         def __init__(self):
             super().__init__()
+            self._sample_count = 0
 
         def generate_until(self, requests: list) -> list[str]:
             results: list[str] = []
             for req in requests:
+                self._sample_count += 1
                 context, gen_kwargs = req.args
                 stop_seqs = gen_kwargs.get("until", [])
+
+                # Show per-sample progress
+                preview = context[:60].replace("\n", " ")
+                print_step(
+                    "  ⏳",
+                    f"Sample {self._sample_count}/{len(requests)}: {preview}…",
+                    "dim",
+                )
 
                 # Fill prompt templates with the benchmark input
                 filled = {}
@@ -192,7 +215,7 @@ def create_benchmark_model(
                     filled[key] = template.replace(placeholder, context)
 
                 if strategy is not None:
-                    output = _run_async(
+                    output = _run_in_loop(
                         strategy.execute(
                             prompts=filled,
                             client=client,
@@ -200,9 +223,8 @@ def create_benchmark_model(
                         )
                     ).output
                 else:
-                    # Direct call with composed prompt
                     prompt_text = filled.get("default", context)
-                    output = _run_async(
+                    output = _run_in_loop(
                         client.complete([{"role": "user", "content": prompt_text}])
                     )
 
@@ -415,7 +437,23 @@ Examples:
     return parser.parse_args()
 
 
-async def main():
+async def _compose_all_specs(spec_paths: List[Path], model: str) -> List[Dict[str, Any]]:
+    """Compose all specs (async — needs LLM calls)."""
+    specs: List[Dict[str, Any]] = []
+    for spec_path in spec_paths:
+        print_step("📄", f"Composing: {spec_path.name}")
+        spec_info = await compose_spec(spec_path, model=model)
+        specs.append(spec_info)
+        print_step(
+            "  ↳",
+            f"{spec_info['name']}  •  strategy: {spec_info['strategy_type']}  "
+            f"•  prompts: {list(spec_info['prompts'].keys())}",
+            "dim",
+        )
+    return specs
+
+
+def main():
     args = parse_args()
 
     print_banner()
@@ -426,22 +464,11 @@ async def main():
             print_step("❌", f"Spec not found: {spec_path}", "bold red")
             sys.exit(1)
 
-    # ── Compose each spec ─────────────────────────────────────────────
+    # ── Compose each spec (async phase) ───────────────────────────────
     print_section("Composing PromptSpec strategies")
+    specs = asyncio.run(_compose_all_specs(args.specs, args.model))
 
-    specs: List[Dict[str, Any]] = []
-    for spec_path in args.specs:
-        print_step("📄", f"Composing: {spec_path.name}")
-        spec_info = await compose_spec(spec_path, model=args.model)
-        specs.append(spec_info)
-        print_step(
-            "  ↳",
-            f"{spec_info['name']}  •  strategy: {spec_info['strategy_type']}  "
-            f"•  prompts: {list(spec_info['prompts'].keys())}",
-            "dim",
-        )
-
-    # ── Run benchmarks ────────────────────────────────────────────────
+    # ── Run benchmarks (sync phase — no outer event loop) ─────────────
     print_section(
         f"Running benchmarks: {', '.join(args.tasks)}"
         + (f" (limit: {args.limit} samples)" if args.limit else " (full)")
@@ -474,4 +501,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
