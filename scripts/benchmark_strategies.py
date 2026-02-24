@@ -150,7 +150,6 @@ def create_benchmark_model(
     from lm_eval.api.model import LM
 
     model_name = model.split("/")[-1] if "/" in model else model
-    client = LLMClient(default_model=model_name)
 
     # Resolve the strategy
     strategy = None
@@ -173,29 +172,29 @@ def create_benchmark_model(
         if strategy_cls:
             strategy = strategy_cls()
 
-    # A dedicated event loop in a background thread, shared across all calls
-    # to avoid creating/destroying thread pools per request (which deadlocks).
-    import threading
-    import concurrent.futures
-
-    _loop = asyncio.new_event_loop()
-    _thread = threading.Thread(target=_loop.run_forever, daemon=True)
-    _thread.start()
-
-    def _run_in_loop(coro):
-        """Submit a coroutine to the shared background loop and wait."""
-        future = asyncio.run_coroutine_threadsafe(coro, _loop)
-        return future.result()
-
     class PromptSpecBenchmarkModel(LM):
         """LM adapter that fills prompt templates with benchmark inputs."""
 
         def __init__(self):
             super().__init__()
             self._sample_count = 0
+            # Use sync litellm.completion directly to avoid event-loop issues.
+            # litellm's async LoggingWorker binds a Queue to the first event
+            # loop it sees; creating new loops later causes RuntimeError.
+            import litellm as _litellm
+            self._litellm = _litellm
+
+        def _sync_complete(self, prompt_text: str) -> str:
+            """Sync LLM call via litellm.completion (no event loop needed)."""
+            resp = self._litellm.completion(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt_text}],
+            )
+            return resp.choices[0].message.content or ""
 
         def generate_until(self, requests: list) -> list[str]:
             results: list[str] = []
+            total = len(requests)
             for req in requests:
                 self._sample_count += 1
                 context, gen_kwargs = req.args
@@ -205,7 +204,7 @@ def create_benchmark_model(
                 preview = context[:60].replace("\n", " ")
                 print_step(
                     "  ⏳",
-                    f"Sample {self._sample_count}/{len(requests)}: {preview}…",
+                    f"Sample {self._sample_count}/{total}: {preview}…",
                     "dim",
                 )
 
@@ -215,24 +214,31 @@ def create_benchmark_model(
                     filled[key] = template.replace(placeholder, context)
 
                 if strategy is not None:
-                    output = _run_in_loop(
+                    # Multi-step strategies are async — run in a fresh loop
+                    # per call to avoid litellm's LoggingWorker queue conflicts.
+                    output = asyncio.run(
                         strategy.execute(
                             prompts=filled,
-                            client=client,
+                            client=LLMClient(default_model=model_name),
                             config=strategy_config,
                         )
                     ).output
                 else:
                     prompt_text = filled.get("default", context)
-                    output = _run_in_loop(
-                        client.complete([{"role": "user", "content": prompt_text}])
-                    )
+                    output = self._sync_complete(prompt_text)
 
                 for stop in stop_seqs:
                     if stop in output:
                         output = output[: output.index(stop)]
 
                 results.append(output)
+            return results
+
+        def loglikelihood(self, requests: list) -> list[tuple[float, bool]]:
+            return [(0.0, False) for _ in requests]
+
+        def loglikelihood_rolling(self, requests: list) -> list[float]:
+            return [0.0 for _ in requests]
             return results
 
         def loglikelihood(self, requests: list) -> list[tuple[float, bool]]:
@@ -467,6 +473,20 @@ def main():
     # ── Compose each spec (async phase) ───────────────────────────────
     print_section("Composing PromptSpec strategies")
     specs = asyncio.run(_compose_all_specs(args.specs, args.model))
+
+    # Reset litellm's internal logging worker so its asyncio.Queue doesn't
+    # stay bound to the now-dead composition event loop.  This prevents
+    # "Queue is bound to a different event loop" RuntimeError noise.
+    try:
+        from litellm.litellm_core_utils.logging_worker import LoggingWorker
+        import litellm
+        for attr in dir(litellm):
+            obj = getattr(litellm, attr, None)
+            if isinstance(obj, LoggingWorker):
+                obj._queue = None
+                obj._worker_task = None
+    except Exception:
+        pass
 
     # ── Run benchmarks (sync phase — no outer event loop) ─────────────
     print_section(
