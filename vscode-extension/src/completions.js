@@ -14,7 +14,11 @@ const { DIRECTIVES, DEBUG_DIRECTIVES, EXECUTION_STRATEGIES } = require("./direct
 
 // ── Directive completions ───────────────────────────────────────
 
-function createDirectiveCompletions() {
+function createDirectiveCompletions(position, prefix) {
+  // Calculate the range that includes the "@" already typed
+  const atCol = prefix.search(/@\w*$/);
+  const replaceRange = new vscode.Range(position.line, atCol, position.line, position.character);
+
   const items = [];
   for (const [name, info] of Object.entries(DIRECTIVES)) {
     const item = new vscode.CompletionItem(info.label, vscode.CompletionItemKind.Keyword);
@@ -23,6 +27,7 @@ function createDirectiveCompletions() {
     item.insertText = new vscode.SnippetString(info.snippet);
     item.filterText = `@${name}`;
     item.sortText = `0-${info.category}-${name}`;
+    item.range = replaceRange;
     items.push(item);
   }
   for (const [name, info] of Object.entries(DEBUG_DIRECTIVES)) {
@@ -32,6 +37,7 @@ function createDirectiveCompletions() {
     item.insertText = new vscode.SnippetString(info.snippet);
     item.filterText = `@${name}`;
     item.sortText = `1-debug-${name}`;
+    item.range = replaceRange;
     items.push(item);
   }
   return items;
@@ -95,7 +101,7 @@ class PromptSpecCompletionProvider {
 
     // 1. Typing "@" at line start → directive completions
     if (/^\s*@\w*$/.test(prefix)) {
-      return createDirectiveCompletions();
+      return createDirectiveCompletions(position, prefix);
     }
 
     // 2. After @execute <strategy> or on @execute line → strategy names
