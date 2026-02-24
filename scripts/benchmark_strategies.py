@@ -24,8 +24,13 @@ import asyncio
 import os
 import sys
 import time
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Suppress litellm's "coroutine was never awaited" noise from its
+# async logging worker when we run strategies in fresh event loops.
+warnings.filterwarnings("ignore", message="coroutine.*was never awaited")
 
 # ---------------------------------------------------------------------------
 # Ensure the project is importable
@@ -214,6 +219,14 @@ def create_benchmark_model(
                     filled[key] = template.replace(placeholder, context)
 
                 if strategy is not None:
+                    # Ensure all required prompt keys exist for multi-prompt
+                    # strategies.  If composition produced only "default",
+                    # populate missing keys so the strategy can find them.
+                    if hasattr(strategy, 'REQUIRED_PROMPTS'):
+                        for rp in strategy.REQUIRED_PROMPTS:
+                            if rp not in filled:
+                                filled[rp] = filled.get("default", context)
+
                     # Multi-step strategies are async — run in a fresh loop
                     # per call to avoid litellm's LoggingWorker queue conflicts.
                     output = asyncio.run(
