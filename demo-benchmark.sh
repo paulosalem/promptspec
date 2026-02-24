@@ -30,7 +30,7 @@ cd "$SCRIPT_DIR"
 
 # ── Defaults ──────────────────────────────────────────────────────────────
 
-LIMIT=10
+LIMIT=40
 MODEL="openai/gpt-4o-mini"
 TASKS="gsm8k"
 
