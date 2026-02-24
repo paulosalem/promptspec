@@ -194,6 +194,7 @@ def create_benchmark_model(
             resp = self._litellm.completion(
                 model=model_name,
                 messages=[{"role": "user", "content": prompt_text}],
+                timeout=120,  # 2 min per call
             )
             return resp.choices[0].message.content or ""
 
@@ -225,13 +226,17 @@ def create_benchmark_model(
                 for attempt in range(3):
                     try:
                         if strategy is not None:
-                            output = asyncio.run(
-                                strategy.execute(
-                                    prompts=filled,
-                                    client=LLMClient(default_model=model_name),
-                                    config=strategy_config,
+                            # Timeout: 5 min per sample (ToT = 3 sequential calls)
+                            async def _run_with_timeout():
+                                return await asyncio.wait_for(
+                                    strategy.execute(
+                                        prompts=filled,
+                                        client=LLMClient(default_model=model_name),
+                                        config=strategy_config,
+                                    ),
+                                    timeout=300,
                                 )
-                            ).output
+                            output = asyncio.run(_run_with_timeout()).output
                         else:
                             prompt_text = filled.get("default", context)
                             output = self._sync_complete(prompt_text)
