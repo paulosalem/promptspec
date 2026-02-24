@@ -4,44 +4,43 @@
   branching_factor: 3
   max_depth: 2
 
-You are a rigorous problem solver. Think carefully, explore multiple paths,
-and synthesize the best solution.
+You are a rigorous problem solver. Explore multiple reasoning paths,
+evaluate which is most sound, and deliver the best answer.
 
 ## Problem
 
 Solve the following: {{problem}}
 
 @prompt generate
-  Generate {{branching_factor}} distinct and creative approaches to solving
-  the problem described above. For each approach:
-  1. Give it a descriptive name
-  2. Describe the strategy in 2-3 sentences
-  3. List its key strengths and potential weaknesses
+  Solve the problem above using {{branching_factor}} independent reasoning
+  paths. For each path, work through the problem step by step from scratch,
+  showing your calculations and logic clearly.
 
-  Be diverse — explore fundamentally different angles, not variations of the
-  same idea.
+  Label each path (Path 1, Path 2, Path 3, etc.) and arrive at a concrete
+  final answer at the end of each one. Take genuinely different angles —
+  vary the order of operations, groupings, or intermediate steps so the
+  paths are not trivial rewordings of each other.
 
 @prompt evaluate
-  Given these candidate approaches:
+  Here are several candidate solutions to the same problem:
 
   {{candidates}}
 
-  Evaluate each approach on these criteria (1-10 scale):
-  - **Feasibility**: How practical and implementable is this?
-  - **Completeness**: Does it fully address the problem?
-  - **Creativity**: Does it offer a novel or insightful perspective?
-  - **Risk**: How likely is it to succeed? (10 = very likely)
+  For each path, verify the reasoning step by step:
+  1. Are the calculations correct at every step?
+  2. Are all constraints and conditions of the problem respected?
+  3. Does the final answer logically follow from the steps?
 
-  Provide a brief rationale for each score. Then declare which approach
-  scores highest overall and why.
+  After checking each path, state which path (or paths) reached the
+  correct answer and briefly explain any errors found in the others.
+  If multiple paths agree on the same answer, note that as additional
+  evidence of correctness.
 
 @prompt synthesize
-  The winning approach was:
+  Based on this analysis:
 
   {{best_approach}}
 
-  Now elaborate this approach into a complete, detailed solution:
-  1. Step-by-step implementation plan
-  2. Key considerations and edge cases
-  3. Expected outcomes and success metrics
-  4. Potential challenges and mitigation strategies
+  Produce the final, verified answer. State the answer clearly and
+  concisely, then provide a clean step-by-step solution that a reader
+  can follow.
