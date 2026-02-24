@@ -2,17 +2,15 @@
 
 @execute tree-of-thought
   branching_factor: 3
-  max_depth: 2
 
-You are a rigorous problem solver. Explore multiple reasoning paths,
-evaluate which is most sound, and deliver the best answer.
-
-## Problem
-
-Solve the following: {{problem}}
+@prompt system
+  You are a rigorous problem solver. Explore multiple reasoning paths,
+  evaluate which is most sound, and deliver the best answer.
 
 @prompt generate
-  Solve the problem above using {{branching_factor}} independent reasoning
+  Problem: {{problem}}
+
+  Solve this problem using {{branching_factor}} independent reasoning
   paths. For each path, work through the problem step by step from scratch,
   showing your calculations and logic clearly.
 
@@ -22,7 +20,9 @@ Solve the following: {{problem}}
   paths are not trivial rewordings of each other.
 
 @prompt evaluate
-  Here are several candidate solutions to the same problem:
+  Original problem: {{problem}}
+
+  Here are several candidate solutions:
 
   {{candidates}}
 
