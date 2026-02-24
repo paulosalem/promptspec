@@ -74,6 +74,7 @@ class CompositionResult:
 
     composed_prompt: str
     prompts: Dict[str, str] = field(default_factory=dict)
+    prompt_roles: Dict[str, str] = field(default_factory=dict)
     raw_xml: str = ""
     analysis: str = ""
     tools: List[Dict[str, Any]] = field(default_factory=list)
@@ -190,7 +191,19 @@ def parse_composition_xml(raw: str) -> CompositionResult:
         return CompositionResult(composed_prompt=raw.strip(), raw_xml=raw)
 
     prompt = _extract_tag(output_block, "prompt")
-    prompts = _parse_json_object(_extract_tag(output_block, "prompts"), "prompts")
+    raw_prompts = _parse_json_object(_extract_tag(output_block, "prompts"), "prompts")
+
+    # Normalise prompts: support both {"name": "text"} and {"name": {"text": "...", "role": "..."}}
+    prompts: Dict[str, str] = {}
+    prompt_roles: Dict[str, str] = {}
+    for name, value in raw_prompts.items():
+        if isinstance(value, dict):
+            prompts[name] = value.get("text", "")
+            if "role" in value:
+                prompt_roles[name] = value["role"]
+        else:
+            prompts[name] = str(value)
+
     tools = _parse_tools_json(_extract_tag(output_block, "tools"))
     execution = _parse_json_object(_extract_tag(output_block, "execution"), "execution")
     analysis = _extract_tag(output_block, "analysis")
@@ -205,6 +218,7 @@ def parse_composition_xml(raw: str) -> CompositionResult:
     return CompositionResult(
         composed_prompt=prompt,
         prompts=prompts,
+        prompt_roles=prompt_roles,
         raw_xml=raw.strip(),
         analysis=analysis,
         tools=tools,
@@ -312,7 +326,8 @@ class PromptSpecController:
             "    (the fully composed prompt goes here)\n"
             "  </prompt>\n"
             "  <prompts>\n"
-            '    (a JSON object mapping prompt names to composed text, e.g. {"default": "..."} or {"generate": "...", "evaluate": "..."})\n'
+            '    (a JSON object mapping prompt names to composed text, e.g. {"default": "..."} or {"generate": "...", "evaluate": "..."}. '
+            'When any @prompt has a role parameter, use object values: {"generate": {"text": "...", "role": "user"}, "evaluate": {"text": "...", "role": "system"}})\n'
             "  </prompts>\n"
             "  <tools>\n"
             "    (a JSON array of tool definitions from @tool directives, or [] if none)\n"

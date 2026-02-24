@@ -76,10 +76,11 @@
     },
 
     "directive-prompt": {
-      "match": "^(\\s*)(@prompt)(\\s+)(\\w+)",
+      "match": "^(\\s*)(@prompt)(\\s+)(\\w+)(.*)",
       "captures": {
         "2": { "name": "keyword.control.prompt.promptspec" },
-        "4": { "name": "entity.name.section.prompt.promptspec" }
+        "4": { "name": "entity.name.section.prompt.promptspec" },
+        "5": { "patterns": [{ "include": "#kv-pair" }] }
       }
     },
 

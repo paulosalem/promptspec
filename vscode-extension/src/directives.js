@@ -237,9 +237,13 @@ const DIRECTIVES = {
     detail: "Define a named prompt section",
     documentation:
       "Slices the spec into multiple named prompts for multi-step execution strategies.\n\n" +
-      "**Example:**\n```\n@prompt generate\n  Generate 3 candidate approaches.\n\n@prompt evaluate\n  Score each approach on correctness and clarity.\n```",
+      "**Parameters:**\n" +
+      "- `role: system|user|assistant` — The message role for this prompt (optional). " +
+      "If omitted, the compilation mechanism decides based on the model.\n\n" +
+      "**Example:**\n```\n@prompt generate\n  Generate 3 candidate approaches.\n\n" +
+      "@prompt evaluate role: system\n  You are a strict evaluator. Score each approach.\n```",
     snippet: "@prompt ${1:name}\n  ${2:prompt content}",
-    params: {},
+    params: { role: ["system", "user", "assistant"] },
     category: "Execution",
   },
   execute: {

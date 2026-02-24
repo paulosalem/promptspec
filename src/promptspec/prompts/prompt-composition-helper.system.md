@@ -27,7 +27,7 @@ Tool calls are not considered part of your textual output. If you invoke primiti
 Tags:
   - `<output>`: contains the current state of the overall composition, including the prompt and any warnings/errors/suggestions.
   - `<prompt>`: contains the current version of the prompt after processing. If the spec has no `@prompt` directives, this is the single composed prompt. If `@prompt` directives are present, this should contain the shared context (for display purposes — the full named prompts are in `<prompts>`).
-  - `<prompts>`: contains a JSON object mapping prompt names to their composed text. If no `@prompt` directives are present, this should be `{"default": "<the composed prompt>"}`. If `@prompt` directives are present, each named prompt (with shared context prepended) appears as a key-value pair.
+  - `<prompts>`: contains a JSON object mapping prompt names to their composed text. If no `@prompt` directives are present, this should be `{"default": "<the composed prompt>"}`. If `@prompt` directives are present, each named prompt (with shared context prepended) appears as a key-value pair. When any `@prompt` has a `role` parameter, use the object format for all prompts: `{"name": {"text": "...", "role": "..."}}` (omit `role` key for prompts without one). When no prompts have roles, use the simple string format: `{"name": "..."}`.
   - `<tools>`: contains a JSON array of tool/function definitions collected from `@tool` directives (OpenAI function-calling format). If no `@tool` directives are present, this tag should contain an empty JSON array `[]`.
   - `<execution>`: contains a JSON object with execution strategy metadata from `@execute` directives. If no `@execute` directive is present, this should contain an empty JSON object `{}`.
   - `<analysis>`: contains a brief, high-level rationale for the changes you made this step. It may be empty. Do NOT include detailed step-by-step traces here (those belong in the transformations log via `log_transition`).
@@ -739,9 +739,12 @@ The `@prompt` directive slices a single spec file into multiple **named prompts*
 
 Syntax:
 ```
-@prompt <name>
+@prompt <name> [role: <role>]
   <prompt content — can include any directives and variables>
 ```
+
+Parameters:
+- `role` (optional): The message role for this prompt — `system`, `user`, or `assistant`. If omitted, the runtime decides based on the model being used. When specified, the value is emitted in the `<prompts>` JSON as metadata alongside the prompt text.
 
 Directive Semantics:
 1. Text **outside** any `@prompt` block is **shared context**. It is prepended to every named prompt in the output.
@@ -750,7 +753,7 @@ Directive Semantics:
 4. If the spec contains `@prompt` directives, only the shared context (text outside `@prompt` blocks) plus each block's content forms that named prompt. There is no `"default"` key unless a `@prompt default` block is explicitly defined.
 5. `@tool` directives at the top level (outside `@prompt` blocks) apply to all prompts. `@tool` inside a `@prompt` block is scoped to that prompt only.
 6. Other directives (`@if`, `@match`, `@refine`, `@style`, etc.) work normally inside `@prompt` blocks.
-7. Each named prompt is emitted in the `<prompts>` section of the output XML as a JSON object mapping name → composed text.
+7. Each named prompt is emitted in the `<prompts>` section of the output XML as a JSON object. If no prompt has a `role` parameter, the format is `{"name": "text"}`. If any prompt has a `role`, all prompts use the object format: `{"name": {"text": "...", "role": "..."}}` (omitting `role` for prompts without one).
 
 Example:
 ```
@@ -763,11 +766,9 @@ Think carefully and rigorously.
   Generate {{branching_factor}} distinct approaches to solving the problem.
   For each, provide a name and 2-3 sentence description.
 
-@prompt evaluate
-  Given these candidate approaches:
-  {{candidates}}
-  
-  Rate each on feasibility (1-10), creativity (1-10), and completeness (1-10).
+@prompt evaluate role: system
+  You are a strict, impartial evaluator. Given candidate approaches,
+  rate each on feasibility (1-10), creativity (1-10), and completeness (1-10).
 
 @prompt synthesize
   The winning approach was: {{best_approach}}
@@ -775,7 +776,7 @@ Think carefully and rigorously.
   Elaborate this into a complete, detailed solution.
 ```
 
-This produces three named prompts, each prefixed with the shared context ("You are solving...").
+This produces three named prompts, each prefixed with the shared context ("You are solving..."). The `evaluate` prompt is marked with `role: system`, meaning the runtime should send it as a system message.
 
 
 ### Execution Strategy Directives
