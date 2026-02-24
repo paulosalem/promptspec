@@ -227,7 +227,7 @@ def create_benchmark_model(
                 # Create one event loop for this sample's retries
                 loop = asyncio.new_event_loop() if strategy is not None else None
                 try:
-                    for attempt in range(3):
+                    for attempt in range(5):
                         try:
                             if strategy is not None:
                                 coro = asyncio.wait_for(
@@ -244,18 +244,19 @@ def create_benchmark_model(
                                 output = self._sync_complete(prompt_text)
                             break
                         except Exception as e:
-                            if attempt < 2:
-                                wait = 5 * (attempt + 1)
+                            if attempt < 4:
+                                # Exponential backoff: 10s, 30s, 60s, 120s
+                                wait = [10, 30, 60, 120][attempt]
                                 print_step(
                                     "  ⚠️",
-                                    f"Retry {attempt + 1}/3 sample {idx + 1} in {wait}s: {type(e).__name__}",
+                                    f"Retry {attempt + 1}/5 sample {idx + 1} in {wait}s: {type(e).__name__}",
                                     "yellow",
                                 )
                                 time.sleep(wait)
                             else:
                                 print_step(
                                     "  ❌",
-                                    f"Sample {idx + 1} failed after 3 attempts: {type(e).__name__}: {e}",
+                                    f"Sample {idx + 1} failed after 5 attempts: {type(e).__name__}: {e}",
                                     "red",
                                 )
                                 output = ""
@@ -273,10 +274,11 @@ def create_benchmark_model(
             # Each thread reuses one event loop per sample, avoiding FD leaks.
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
-            # Cap concurrency lower for multi-step strategies to avoid FD exhaustion
+            # Cap concurrency for multi-step strategies to avoid API rate limits.
+            # ToT = 3 calls/sample, so 2 workers = 6 concurrent API calls.
             effective_workers = max_workers
             if strategy is not None:
-                effective_workers = min(max_workers, 4)
+                effective_workers = min(max_workers, 2)
             max_workers_actual = min(effective_workers, total)
             results: list[str | None] = [None] * total
 
