@@ -235,8 +235,12 @@ def run_benchmarks(
 ) -> Dict[str, Dict[str, Any]]:
     """Run lm-eval benchmarks for each composed spec."""
     from lm_eval.evaluator import simple_evaluate
+    from lm_eval.tasks import TaskManager
 
     all_results: Dict[str, Dict[str, Any]] = {}
+
+    # Reuse a single TaskManager so datasets are loaded/cached once
+    task_manager = TaskManager()
 
     for i, spec_info in enumerate(specs, 1):
         name = spec_info["name"]
@@ -258,6 +262,7 @@ def run_benchmarks(
             num_fewshot=num_fewshot,
             limit=limit,
             batch_size=1,
+            task_manager=task_manager,
         )
         elapsed = time.perf_counter() - t0
 
