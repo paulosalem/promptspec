@@ -3,12 +3,13 @@
 #  demo-benchmark.sh — Benchmark PromptSpec strategies on GSM8K
 # ──────────────────────────────────────────────────────────────────────────
 #
-#  Compares three prompting strategies composed with PromptSpec against
+#  Compares four prompting strategies composed with PromptSpec against
 #  the GSM8K math benchmark:
 #
 #    • Chain-of-Thought (single-call baseline)
 #    • Self-Consistency (5 samples + majority vote)
 #    • Tree of Thought  (generate → evaluate → synthesize)
+#    • Reflection        (generate → critique → revise loop)
 #
 #  Usage:
 #    ./demo-benchmark.sh              # Quick demo (10 samples)
@@ -104,6 +105,7 @@ echo "║  Strategies:                                                 ║"
 echo "║    📝 Chain-of-Thought (single-call baseline)                ║"
 echo "║    🎲 Self-Consistency (5 samples + majority vote)           ║"
 echo "║    🌳 Tree of Thought  (generate → evaluate → synthesize)   ║"
+echo "║    🔄 Reflection        (generate → critique → revise)       ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -114,6 +116,7 @@ python scripts/benchmark_strategies.py \
     specs/chain-of-thought.promptspec.md \
     specs/self-consistency-solver.promptspec.md \
     specs/tree-of-thought-solver.promptspec.md \
+    specs/reflection-solver.promptspec.md \
   --tasks "$TASKS" \
   --model "$MODEL" \
   $LIMIT_FLAG \

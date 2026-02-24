@@ -511,11 +511,12 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""\
 Examples:
-  # Compare CoT vs Self-Consistency vs Tree-of-Thought on GSM8K (20 samples)
+  # Compare all four strategies on GSM8K (20 samples)
   python scripts/benchmark_strategies.py \\
     --specs specs/chain-of-thought.promptspec.md \\
            specs/self-consistency-solver.promptspec.md \\
            specs/tree-of-thought-solver.promptspec.md \\
+           specs/reflection-solver.promptspec.md \\
     --tasks gsm8k --limit 20
 
   # Full GSM8K benchmark
