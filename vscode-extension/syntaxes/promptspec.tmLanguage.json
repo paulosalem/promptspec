@@ -3,7 +3,7 @@
   "name": "PromptSpec",
   "scopeName": "text.markdown.promptspec",
   "fileTypes": ["promptspec.md"],
-  "firstLineMatch": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract|execute|prompt|tool)\\b",
+  "firstLineMatch": "^\\s*@(?:refine|note|match|if|audience|style|revise|expand|contract|execute|prompt|tool|embed)\\b",
   "patterns": [
     { "include": "#escaped-at" },
     { "include": "#note-block" },
@@ -13,6 +13,7 @@
     { "include": "#directive-prompt" },
     { "include": "#directive-tool" },
     { "include": "#directive-refine" },
+    { "include": "#directive-embed" },
     { "include": "#directive-match" },
     { "include": "#directive-if" },
     { "include": "#directive-else" },
@@ -101,6 +102,14 @@
       }
     },
 
+    "directive-embed": {
+      "match": "^(\\s*)(@embed)((?:\\s+(?:file|lang|label|indent):\\s*(?:\"[^\"]*\"|\\S+))*)(\\s*)$",
+      "captures": {
+        "2": { "name": "keyword.control.embed.promptspec" },
+        "3": { "patterns": [{ "include": "#kv-pair" }, { "include": "#quoted-string" }] }
+      }
+    },
+
     "directive-match": {
       "match": "^(\\s*)(@match)(\\s+)(\\w+)",
       "captures": {
@@ -150,7 +159,7 @@
     },
 
     "directive-keyword": {
-      "match": "^(\\s*)(@(?:refine|if|else|match|execute|prompt|tool|revise|expand|contract|canon|cohere|audience|style|summarize|compress|extract|generate_examples|output_format|structural_constraints|assert|note))\\b",
+      "match": "^(\\s*)(@(?:refine|if|else|match|execute|prompt|tool|revise|expand|contract|canon|cohere|audience|style|summarize|compress|extract|generate_examples|output_format|structural_constraints|assert|note|embed))\\b",
       "captures": {
         "2": { "name": "keyword.control.directive.promptspec" }
       }

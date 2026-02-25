@@ -255,15 +255,18 @@ const DIRECTIVES = {
       "**Strategies:**\n" +
       "- `single-call` — One LLM call (default)\n" +
       "- `self-consistency` — Multiple samples, majority vote\n" +
-      "- `tree-of-thought` — Generate → Evaluate → Synthesise\n" +
-      "- `reflection` — Generate → Critique → Revise\n\n" +
+      "- `tree-of-thought` — Full BFS/DFS Tree of Thought (Yao et al. 2023)\n" +
+      "- `simplified-tree-of-thought` — Lightweight generate → evaluate → synthesise\n" +
+      "- `reflection` — Generate → Critique → Revise loop\n" +
+      "- `collaborative` — LLM generates → human edits → LLM continues\n\n" +
       "**Common Parameters:**\n" +
       "- `mode: minimal|full`\n" +
       "- `depth: <number>` — Iteration depth\n" +
       "- `branching_factor: <number>` — Branches for tree-of-thought\n" +
-      "- `samples: <number>` — Sample count for self-consistency\n\n" +
+      "- `samples: <number>` — Sample count for self-consistency\n" +
+      "- `max_rounds: <number>` — Edit rounds for collaborative\n\n" +
       "**Example:**\n```\n@execute tree-of-thought\n  branching_factor: 3\n  depth: 2\n```",
-    snippet: "@execute ${1|single-call,self-consistency,tree-of-thought,reflection|}",
+    snippet: "@execute ${1|single-call,self-consistency,tree-of-thought,simplified-tree-of-thought,reflection,collaborative|}",
     params: { mode: ["minimal", "full"] },
     category: "Execution",
   },
@@ -293,6 +296,26 @@ const DIRECTIVES = {
     params: {},
     category: "Meta",
   },
+
+  // ── Verbatim Injection ────────────────────────────────────────
+  embed: {
+    label: "@embed",
+    detail: "Inject content verbatim (no processing) in a fenced code block",
+    documentation:
+      "Inserts content **as-is** inside a fenced code block — no directive or variable processing. " +
+      "Can load from a file or use an inline block. Rich document formats (PDF, DOCX, PPTX, XLSX) " +
+      "are automatically converted to Markdown via markitdown.\n\n" +
+      "**Parameters:**\n" +
+      "- `file: <path>` — Load content from an external file\n" +
+      "- `lang: <language>` — Language hint for the fenced block (e.g., `python`, `json`)\n" +
+      "- `label: \"<text>\"` — Caption placed before the block\n" +
+      "- `indent: true|false` — Indent the block for visual clarity (default: `true`)\n\n" +
+      "**Examples:**\n```\n@embed file: samples/data.json lang: json label: \"Sample input\"\n\n" +
+      "@embed lang: python\n  def greet(name):\n      return f\"Hello, {name}!\"\n```",
+    snippet: "@embed file: ${1:path/to/file}",
+    params: { lang: null, indent: ["true", "false"] },
+    category: "Verbatim",
+  },
 };
 
 // Debug query pseudo-directives
@@ -321,7 +344,7 @@ const DEBUG_DIRECTIVES = {
 };
 
 // Execution strategy names (valid values for @execute)
-const EXECUTION_STRATEGIES = ["single-call", "self-consistency", "tree-of-thought", "reflection"];
+const EXECUTION_STRATEGIES = ["single-call", "self-consistency", "tree-of-thought", "simplified-tree-of-thought", "reflection", "collaborative"];
 
 // Set of all known directive names (for diagnostics)
 const ALL_DIRECTIVE_NAMES = new Set([
