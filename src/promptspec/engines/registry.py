@@ -19,6 +19,7 @@ def _lazy_load_builtins() -> None:
     from .self_consistency import SelfConsistencyEngine
     from .tree_of_thought import TreeOfThoughtEngine, SimplifiedTreeOfThoughtEngine
     from .reflection import ReflectionEngine
+    from .collaborative import CollaborativeEngine
 
     BUILTIN_ENGINES.update({
         "single-call": SingleCallEngine,
@@ -26,6 +27,7 @@ def _lazy_load_builtins() -> None:
         "tree-of-thought": TreeOfThoughtEngine,
         "simplified-tree-of-thought": SimplifiedTreeOfThoughtEngine,
         "reflection": ReflectionEngine,
+        "collaborative": CollaborativeEngine,
     })
 
 
@@ -35,7 +37,8 @@ def resolve_engine(name_or_path: str) -> Engine:
     Args:
         name_or_path: Either a built-in name (``"single-call"``,
             ``"self-consistency"``, ``"tree-of-thought"``,
-            ``"simplified-tree-of-thought"``, ``"reflection"``)
+            ``"simplified-tree-of-thought"``, ``"reflection"``,
+            ``"collaborative"``)
             or a fully-qualified Python class path
             (e.g. ``"my_package.engines.CustomEngine"``).
 
