@@ -929,3 +929,109 @@ Semantics:
 - You may use its content to guide warnings/suggestions during processing, but it must not appear in the final prompt.
 
 
+### Verbatim Injection: `@embed`
+
+`@embed` injects content **verbatim** — without any directive or variable processing — into the composed prompt, wrapped inside a fenced code block. This is useful for embedding example texts, code samples, log excerpts, data files, or any content the LLM should treat as literal input rather than instructions.
+
+**Key rule:** Content inside `@embed` is **opaque**. Do NOT process any directives (`@refine`, `@if`, etc.) or substitute any variables (`{{...}}`) found inside the embedded content. Insert it exactly as provided.
+
+Syntax variants:
+
+1. **File-based** — load content from an external file:
+   ```
+   @embed file: path/to/document.txt
+   ```
+
+2. **File with parameters**:
+   ```
+   @embed file: path/to/example.py lang: python label: "Sample code"
+   ```
+
+3. **Inline block** — embed the indented body text directly:
+   ```
+   @embed
+     This text is inserted exactly as-is.
+     No directives or {{variables}} are processed here.
+   ```
+
+4. **Inline block with parameters**:
+   ```
+   @embed lang: json label: "API Response"
+     {"status": "ok", "count": 42}
+   ```
+
+Parameters:
+- `file: <path>` — Path to the file to embed. Use `read_file(path)` to load its content. Rich document formats (.pdf, .docx, .pptx, .xlsx) are automatically converted to Markdown by the `read_file` tool.
+- `lang: <language>` (optional) — Language hint for the fenced code block (e.g., `python`, `json`, `text`). If omitted, use a plain fence with no language.
+- `label: "<text>"` (optional) — A caption to place on the line immediately before the fenced block (e.g., `Sample input:`).
+- `indent: true|false` (default: `true`) — Whether to indent the entire fenced block by 4 spaces for extra visual clarity.
+
+Directive Semantics:
+1. Determine the input text X:
+   - If `file: <path>` is provided, read the file content via `read_file(path)` and let X be that content.
+   - Else if an indented block O is present, let X be O **as-is** (no processing — treat it as plain text).
+2. Wrap X in a fenced code block:
+   - If `lang` is provided: `` ```<lang>\n<X>\n``` ``
+   - Else: `` ```\n<X>\n``` ``
+3. If `indent: true` (the default), indent every line of the fenced block by 4 spaces.
+4. If `label` is provided, prepend `<label>:\n\n` above the fenced block.
+5. Replace the directive region with the result, producing S'.
+6. Do NOT process X for directives or variables — it is opaque verbatim content.
+
+Example:
+
+Input spec:
+```
+Analyze the following error log:
+
+@embed file: logs/error.log lang: text label: "Error log excerpt"
+```
+
+Resulting composed prompt (assuming the file contains three lines of log entries):
+```
+Analyze the following error log:
+
+Error log excerpt:
+
+    ```text
+    2024-01-15 ERROR: Connection refused to database
+    2024-01-15 ERROR: Retry 1/3 failed
+    2024-01-15 WARN: Falling back to read replica
+    ```
+```
+
+Another example with inline block:
+
+Input spec:
+```
+Compare these two code snippets:
+
+@embed lang: python label: "Version A"
+  def greet(name):
+      return f"Hello, {name}!"
+
+@embed lang: python label: "Version B"
+  def greet(name: str) -> str:
+      return f"Hi there, {name}!"
+```
+
+Resulting composed prompt:
+```
+Compare these two code snippets:
+
+Version A:
+
+    ```python
+    def greet(name):
+        return f"Hello, {name}!"
+    ```
+
+Version B:
+
+    ```python
+    def greet(name: str) -> str:
+        return f"Hi there, {name}!"
+    ```
+```
+
+

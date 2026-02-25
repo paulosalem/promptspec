@@ -1559,3 +1559,179 @@ class TestDeepNesting:
             assert steps_pos < output_pos, (
                 f"Steps (pos {steps_pos}) should appear before Output (pos {output_pos})"
             )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 13. @embed — Verbatim Injection (unit tests for _read_file / conversion)
+# ═══════════════════════════════════════════════════════════════════
+
+import tempfile
+
+
+class TestReadFileRichConversion:
+    """Unit tests for _read_file rich-format detection and conversion.
+
+    These do NOT require an LLM or API key.
+    """
+
+    def _read_file(self, file_name: str, base_dir: Path) -> str:
+        from promptspec.controller import PromptSpecController
+        return PromptSpecController._read_file(file_name, base_dir)
+
+    def test_plain_text_file_reads_normally(self, tmp_path):
+        """Plain .txt files are read as-is."""
+        f = tmp_path / "hello.txt"
+        f.write_text("Hello, world!")
+        result = self._read_file("hello.txt", tmp_path)
+        assert result == "Hello, world!"
+
+    def test_markdown_file_reads_normally(self, tmp_path):
+        """Plain .md files are read as-is (not treated as rich)."""
+        f = tmp_path / "doc.md"
+        f.write_text("# Title\nSome text.")
+        result = self._read_file("doc.md", tmp_path)
+        assert result == "# Title\nSome text."
+
+    def test_missing_file_returns_error(self, tmp_path):
+        result = self._read_file("nonexistent.txt", tmp_path)
+        assert "Error" in result
+        assert "not found" in result
+
+    def test_directory_traversal_blocked(self, tmp_path):
+        result = self._read_file("../../etc/passwd", tmp_path)
+        assert "Error" in result
+        assert "escapes" in result
+
+    def test_pdf_extension_triggers_conversion(self, tmp_path):
+        """A .pdf file triggers the rich format conversion path."""
+        from promptspec.controller import PromptSpecController
+        # We test that _convert_rich_file is called by checking it goes through
+        # the conversion code path (it won't error out with "not found")
+        f = tmp_path / "doc.pdf"
+        f.write_bytes(b"not a real PDF")
+        result = self._read_file("doc.pdf", tmp_path)
+        # Should not return a "file not found" error
+        assert "not found" not in result
+        # Verify the extension is in the rich set
+        assert ".pdf" in PromptSpecController._RICH_EXTENSIONS
+
+    def test_docx_extension_triggers_conversion(self, tmp_path):
+        from promptspec.controller import PromptSpecController
+        f = tmp_path / "doc.docx"
+        f.write_bytes(b"PK\x03\x04not-a-real-docx")
+        result = self._read_file("doc.docx", tmp_path)
+        assert "not found" not in result
+        assert ".docx" in PromptSpecController._RICH_EXTENSIONS
+
+    def test_rich_extensions_recognised(self):
+        """All expected extensions are in the rich set."""
+        from promptspec.controller import PromptSpecController
+        for ext in [".pdf", ".docx", ".pptx", ".xlsx", ".xls", ".doc", ".ppt", ".html", ".htm"]:
+            assert ext in PromptSpecController._RICH_EXTENSIONS, f"{ext} not recognised"
+
+    def test_missing_markitdown_gives_clear_error(self, tmp_path, monkeypatch):
+        """If markitdown is not installed, a helpful error is returned."""
+        import builtins
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "markitdown":
+                raise ImportError("No module named 'markitdown'")
+            return real_import(name, *args, **kwargs)
+
+        f = tmp_path / "doc.pdf"
+        f.write_bytes(b"%PDF-1.4 fake")
+
+        monkeypatch.setattr(builtins, "__import__", mock_import)
+        try:
+            from promptspec.controller import PromptSpecController
+            result = PromptSpecController._convert_rich_file(f, "doc.pdf")
+            assert "pip install promptspec[convert]" in result
+        finally:
+            monkeypatch.setattr(builtins, "__import__", real_import)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 14. @embed — Integration tests (require LLM)
+# ═══════════════════════════════════════════════════════════════════
+
+
+@_skip
+class TestEmbedDirective:
+    """Integration tests for the @embed directive via LLM composition."""
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_embed_inline_produces_fenced_block(self):
+        """@embed with inline block wraps content in a fenced code block."""
+        spec = (
+            "Analyze this data:\n\n"
+            "@embed\n"
+            "  line one\n"
+            "  line two\n"
+            "  line three\n"
+        )
+        r = await _compose(spec, {})
+        p = r.composed_prompt
+        # Should contain fenced code block markers
+        assert "```" in p
+        # The original content should be present verbatim
+        assert "line one" in p
+        assert "line two" in p
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_embed_with_lang_parameter(self):
+        """@embed lang: json produces a json-fenced block."""
+        spec = (
+            "Here is the config:\n\n"
+            '@embed lang: json\n'
+            '  {"key": "value"}\n'
+        )
+        r = await _compose(spec, {})
+        p = r.composed_prompt
+        assert "```json" in p or "``` json" in p
+        assert '"key"' in p
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_embed_with_label(self):
+        """@embed with label: produces a caption before the block."""
+        spec = (
+            "Review this:\n\n"
+            '@embed label: "Sample Output"\n'
+            "  result: ok\n"
+        )
+        r = await _compose(spec, {})
+        p = r.composed_prompt
+        assert "Sample Output" in p
+        assert "```" in p
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_embed_does_not_process_variables(self):
+        """Variables inside @embed should NOT be substituted."""
+        spec = (
+            "Template reference:\n\n"
+            "@embed\n"
+            "  Hello {{name}}, welcome to {{place}}.\n"
+        )
+        r = await _compose(spec, {"name": "Alice", "place": "Wonderland"})
+        p = r.composed_prompt
+        # The {{name}} should remain as-is inside the embed
+        assert "{{name}}" in p
+        assert "{{place}}" in p
+
+    @pytest.mark.integration
+    @pytest.mark.asyncio
+    async def test_embed_file(self):
+        """@embed file: loads and wraps a file's content."""
+        spec = (
+            "Here is the reference spec:\n\n"
+            "@embed file: chain-of-thought.promptspec.md lang: markdown\n"
+        )
+        r = await _compose(spec, {}, base_dir=SPECS_DIR)
+        p = r.composed_prompt
+        assert "```" in p
+        # The file content should be present
+        assert "chain" in p.lower() or "thought" in p.lower()

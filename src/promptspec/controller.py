@@ -28,7 +28,8 @@ TOOLS: List[Dict[str, Any]] = [
             "name": "read_file",
             "description": (
                 "Read the content of a file from the filesystem. "
-                "Use this when a directive like @refine references an external file."
+                "Use this when a directive like @refine or @embed references an external file. "
+                "Rich document formats (PDF, DOCX, PPTX, XLSX) are automatically converted to Markdown."
             ),
             "parameters": {
                 "type": "object",
@@ -498,16 +499,47 @@ class PromptSpecController:
     # Primitive helpers
     # ------------------------------------------------------------------
 
+    # Rich document extensions that markitdown can convert to Markdown
+    _RICH_EXTENSIONS = {".pdf", ".docx", ".pptx", ".xlsx", ".xls", ".doc", ".ppt", ".html", ".htm"}
+
     @staticmethod
     def _read_file(file_name: str, base_dir: Path) -> str:
-        """Read a file relative to *base_dir*."""
+        """Read a file relative to *base_dir*.
+
+        For rich document formats (.pdf, .docx, .pptx, .xlsx, etc.),
+        automatically converts to Markdown using ``markitdown`` if
+        installed.  Falls back to a helpful error otherwise.
+        """
         path = (base_dir / file_name).resolve()
         # Basic security: prevent traversal outside base_dir
         if not str(path).startswith(str(base_dir.resolve())):
             return f"Error: path '{file_name}' escapes the base directory."
         if not path.is_file():
             return f"Error: file '{file_name}' not found."
+
+        # Check if this is a rich format that needs conversion
+        if path.suffix.lower() in PromptSpecController._RICH_EXTENSIONS:
+            return PromptSpecController._convert_rich_file(path, file_name)
+
         try:
             return path.read_text(encoding="utf-8")
         except Exception as exc:
             return f"Error reading '{file_name}': {exc}"
+
+    @staticmethod
+    def _convert_rich_file(path: Path, file_name: str) -> str:
+        """Convert a rich document to Markdown via markitdown."""
+        try:
+            from markitdown import MarkItDown
+        except ImportError:
+            return (
+                f"Error: file '{file_name}' is a rich document format "
+                f"({path.suffix}) that requires the 'markitdown' package "
+                f"for conversion. Install it with: pip install promptspec[convert]"
+            )
+        try:
+            md = MarkItDown()
+            result = md.convert(str(path))
+            return result.text_content
+        except Exception as exc:
+            return f"Error converting '{file_name}' to Markdown: {exc}"
