@@ -20,6 +20,11 @@ verbatim citations from the source material.
        or miscategorised items
     3. **Revise** — targeted improvements preserving correct findings
 
+  The texts are loaded from external files using the `@embed` directive,
+  which injects them verbatim inside fenced code blocks. This means the
+  texts can also be PDFs, DOCX files, etc. — `@embed` auto-converts
+  rich formats to Markdown via markitdown.
+
   The output is a structured list of characteristics, each tagged as
   a **difference** or **similarity**, with brief illustrative quotes
   from both texts.
@@ -34,11 +39,11 @@ verbatim citations from the source material.
 
 ### Text A — {{label_a}}
 
-{{text_a}}
+@embed file: samples/corporate-memo-pro-office.txt label: "Text A — Corporate Memo (pro-office)"
 
 ### Text B — {{label_b}}
 
-{{text_b}}
+@embed file: samples/employee-blog-pro-remote.txt label: "Text B — Employee Blog Post (pro-remote)"
 
 @prompt generate
   You are a comparative analyst. Analyse the two texts below and produce
@@ -47,10 +52,10 @@ verbatim citations from the source material.
   **Focus**: {{focus}}
 
   ### Text A — {{label_a}}
-  {{text_a}}
+  @embed file: samples/corporate-memo-pro-office.txt
 
   ### Text B — {{label_b}}
-  {{text_b}}
+  @embed file: samples/employee-blog-pro-remote.txt
 
   For each characteristic you identify, provide:
   1. **Label** — a short name for the characteristic (e.g. "Tone",
