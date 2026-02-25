@@ -111,6 +111,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to a .promptspec.yaml or .json runtime config file",
     )
 
+    # TUI
+    parser.add_argument(
+        "--ui",
+        action="store_true",
+        help="Launch an interactive TUI (requires promptspec[ui])",
+    )
+
     return parser
 
 
@@ -410,6 +417,7 @@ def cli() -> None:
     if args.stdin:
         spec_text = sys.stdin.read()
         base_dir = Path.cwd()
+        spec_path = None
     elif args.spec_file:
         spec_path = Path(args.spec_file).resolve()
         if not spec_path.is_file():
@@ -422,6 +430,26 @@ def cli() -> None:
         sys.exit(1)
 
     variables = _parse_variables(printer, args)
+
+    # TUI mode
+    if getattr(args, "ui", False):
+        if spec_path is None:
+            printer.error("--ui requires a spec file (not stdin).")
+            sys.exit(1)
+        try:
+            from promptspec.tui.app import launch_tui
+        except ImportError:
+            printer.error(
+                "Textual is required for --ui mode. "
+                "Install with: [bright_cyan]pip install promptspec\\[ui][/]"
+            )
+            sys.exit(1)
+        launch_tui(
+            spec_path=spec_path,
+            vars_path=args.vars_file,
+            config_path=args.config,
+        )
+        sys.exit(0)
 
     try:
         if args.run:

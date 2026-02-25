@@ -55,8 +55,11 @@ dev = [
 convert = [
     "markitdown>=0.1.0",
 ]
+ui = [
+    "textual>=0.40.0",
+]
 all = [
-    "promptspec[dev,convert]",
+    "promptspec[dev,convert,ui]",
 ]
 
 [tool.hatch.build.targets.wheel]

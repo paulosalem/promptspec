@@ -1,0 +1,192 @@
+/* PromptSpec TUI — Textual CSS Theme */
+
+Screen {
+    background: $surface;
+}
+
+/* ── Header ───────────────────────────────────────── */
+#header {
+    dock: top;
+    height: 3;
+    background: $primary;
+    color: $text;
+    text-align: center;
+    padding: 1;
+    text-style: bold;
+}
+
+/* ── Main layout ──────────────────────────────────── */
+#main-container {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#left-panel {
+    width: 1fr;
+    min-width: 30;
+    border-right: thick $primary-darken-2;
+    overflow-y: auto;
+    padding: 1 2;
+}
+
+#right-panel {
+    width: 1fr;
+    min-width: 30;
+    overflow-y: auto;
+    padding: 1 2;
+}
+
+/* ── Spec info panel ──────────────────────────────── */
+#spec-info {
+    height: auto;
+    margin-bottom: 1;
+    padding: 1;
+    border: round $primary-darken-1;
+}
+
+#spec-info .label {
+    color: $text-muted;
+    text-style: bold;
+}
+
+/* ── Input form ───────────────────────────────────── */
+#input-form {
+    height: auto;
+    padding: 1;
+}
+
+.input-group {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.input-label {
+    height: 1;
+    color: $text;
+    text-style: bold;
+    margin-bottom: 0;
+}
+
+.input-help {
+    height: auto;
+    color: $text-muted;
+    text-style: italic;
+    margin-bottom: 0;
+}
+
+.input-source {
+    height: 1;
+    color: $accent;
+}
+
+Input {
+    margin-bottom: 1;
+}
+
+TextArea {
+    height: 6;
+    margin-bottom: 1;
+}
+
+Select {
+    margin-bottom: 1;
+}
+
+Switch {
+    margin-bottom: 1;
+}
+
+/* ── Action bar ───────────────────────────────────── */
+#action-bar {
+    dock: bottom;
+    height: 3;
+    layout: horizontal;
+    align: center middle;
+    padding: 0 2;
+    background: $surface-darken-1;
+}
+
+#action-bar Button {
+    margin: 0 1;
+    min-width: 16;
+}
+
+#btn-compose {
+    background: $primary;
+}
+
+#btn-run {
+    background: $success;
+}
+
+#btn-quit {
+    background: $error;
+}
+
+/* ── Preview pane ─────────────────────────────────── */
+#preview-pane {
+    height: 1fr;
+    border: round $primary-darken-1;
+    padding: 1;
+    overflow-y: auto;
+}
+
+#preview-title {
+    text-style: bold;
+    color: $text;
+    margin-bottom: 1;
+}
+
+/* ── Output pane ──────────────────────────────────── */
+#output-container {
+    dock: bottom;
+    height: 12;
+    border-top: thick $primary-darken-2;
+    overflow-y: auto;
+    padding: 1 2;
+    display: none;
+}
+
+#output-container.visible {
+    display: block;
+}
+
+#output-title {
+    text-style: bold;
+    color: $text;
+    margin-bottom: 1;
+}
+
+/* ── Step log ─────────────────────────────────────── */
+.step-entry {
+    height: auto;
+    margin-bottom: 0;
+}
+
+.step-icon {
+    width: 3;
+}
+
+.step-text {
+    width: 1fr;
+}
+
+/* ── Spinner overlay ──────────────────────────────── */
+#spinner-overlay {
+    align: center middle;
+    background: $surface 80%;
+    display: none;
+}
+
+#spinner-overlay.visible {
+    display: block;
+}
+
+/* ── Toast / status bar ───────────────────────────── */
+#status-bar {
+    dock: bottom;
+    height: 1;
+    background: $surface-darken-2;
+    color: $text-muted;
+    padding: 0 2;
+}
