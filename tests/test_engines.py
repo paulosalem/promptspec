@@ -242,11 +242,13 @@ class TestEngineProtocol:
             SingleCallEngine,
             SelfConsistencyEngine,
             TreeOfThoughtEngine,
+            SimplifiedTreeOfThoughtEngine,
             ReflectionEngine,
         )
         assert isinstance(SingleCallEngine(), Engine)
         assert isinstance(SelfConsistencyEngine(), Engine)
         assert isinstance(TreeOfThoughtEngine(), Engine)
+        assert isinstance(SimplifiedTreeOfThoughtEngine(), Engine)
         assert isinstance(ReflectionEngine(), Engine)
 
     def test_custom_class_satisfies_protocol(self):
@@ -262,12 +264,13 @@ class TestEngineProtocol:
         from promptspec.engines import resolve_engine
         from promptspec.engines.single_call import SingleCallEngine
         from promptspec.engines.self_consistency import SelfConsistencyEngine
-        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
+        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine, SimplifiedTreeOfThoughtEngine
         from promptspec.engines.reflection import ReflectionEngine
 
         assert isinstance(resolve_engine("single-call"), SingleCallEngine)
         assert isinstance(resolve_engine("self-consistency"), SelfConsistencyEngine)
         assert isinstance(resolve_engine("tree-of-thought"), TreeOfThoughtEngine)
+        assert isinstance(resolve_engine("simplified-tree-of-thought"), SimplifiedTreeOfThoughtEngine)
         assert isinstance(resolve_engine("reflection"), ReflectionEngine)
 
     def test_resolve_unknown_raises(self):
@@ -394,10 +397,11 @@ class TestSelfConsistencyEngine:
 
 
 class TestTreeOfThoughtEngine:
+    """Tests for the SIMPLIFIED tree-of-thought engine (backward compat)."""
 
     @pytest.mark.asyncio
     async def test_three_stage_pipeline(self):
-        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
+        from promptspec.engines.tree_of_thought import SimplifiedTreeOfThoughtEngine
 
         responses = [
             "Path A solution",          # generate_0
@@ -407,7 +411,7 @@ class TestTreeOfThoughtEngine:
             "Detailed solution B",      # synthesize
         ]
         client = MockLLMClient(responses)
-        engine = TreeOfThoughtEngine(client=client)
+        engine = SimplifiedTreeOfThoughtEngine(client=client)
 
         result_cr = CompositionResult(
             composed_prompt="shared context",
@@ -416,7 +420,7 @@ class TestTreeOfThoughtEngine:
                 "evaluate": "Evaluate: {{candidates}}",
                 "synthesize": "Elaborate: {{best_approach}}",
             },
-            execution={"type": "tree-of-thought", "branching_factor": 3},
+            execution={"type": "simplified-tree-of-thought", "branching_factor": 3},
         )
         exec_result = await engine.execute(result_cr)
 
@@ -427,12 +431,12 @@ class TestTreeOfThoughtEngine:
     @pytest.mark.asyncio
     async def test_config_override(self):
         """RuntimeConfig engine_config overrides @execute params."""
-        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
+        from promptspec.engines.tree_of_thought import SimplifiedTreeOfThoughtEngine
         from promptspec.engines.base import RuntimeConfig
 
         responses = ["g1", "g2", "g3", "g4", "g5", "eval", "synth"]
         client = MockLLMClient(responses)
-        engine = TreeOfThoughtEngine(client=client)
+        engine = SimplifiedTreeOfThoughtEngine(client=client)
 
         result_cr = CompositionResult(
             composed_prompt="ctx",
@@ -441,10 +445,10 @@ class TestTreeOfThoughtEngine:
                 "evaluate": "Eval {{candidates}}",
                 "synthesize": "Synth {{best_approach}}",
             },
-            execution={"type": "tree-of-thought", "branching_factor": 2},
+            execution={"type": "simplified-tree-of-thought", "branching_factor": 2},
         )
         runtime_config = RuntimeConfig(
-            engine="tree-of-thought",
+            engine="simplified-tree-of-thought",
             engine_config={"branching_factor": 5},
         )
         exec_result = await engine.execute(result_cr, runtime_config)
@@ -452,6 +456,50 @@ class TestTreeOfThoughtEngine:
         # With branching_factor=5, there should be 5 generate calls
         gen_calls = [c for c in client.calls if c["temperature"] == 0.9]
         assert len(gen_calls) == 5
+
+
+class TestFullTreeOfThoughtEngine:
+    """Tests for the FULL tree-of-thought engine (BFS/DFS)."""
+
+    @pytest.mark.asyncio
+    async def test_full_tot_basic(self):
+        from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
+
+        # Enough responses for 1 depth: 3 thoughts + 3 evals + synthesize = 7
+        call_idx = [0]
+        def _responder():
+            responses = [
+                "Step 1: calc A",    # thought
+                "Step 1: calc B",    # thought
+                "Step 1: calc C",    # thought
+                "Sure",              # eval
+                "Maybe",             # eval
+                "Impossible",        # eval
+                "Final answer: 42",  # synthesize
+            ]
+            return responses
+
+        client = MockLLMClient(_responder())
+        engine = TreeOfThoughtEngine(client=client)
+
+        result_cr = CompositionResult(
+            composed_prompt="ctx",
+            prompts={
+                "thought_step": "Given:\n{{state}}\n\nNext step.",
+                "evaluate_step": "Evaluate:\n{{state}}\n\nsure/maybe/impossible.",
+                "synthesize": "Best path:\n{{best_path}}\n\nAnswer.",
+            },
+            execution={
+                "type": "tree-of-thought",
+                "max_depth": 1,
+                "branching_factor": 3,
+                "beam_width": 2,
+            },
+        )
+        exec_result = await engine.execute(result_cr)
+
+        assert exec_result.output  # Got a non-empty result
+        assert exec_result.steps[-1].name == "synthesize"
 
 
 class TestReflectionEngine:
@@ -580,9 +628,22 @@ class TestPromptValidation:
 
     @pytest.mark.asyncio
     async def test_tree_of_thought_missing_prompts(self):
-        """ToT engine rejects spec with only default prompt."""
+        """Full ToT engine rejects spec with only default prompt."""
         from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
-        engine = TreeOfThoughtEngine(client=MockLLMClient(["x"] * 5))
+        engine = TreeOfThoughtEngine(client=MockLLMClient(["x"] * 20))
+        result = CompositionResult(
+            composed_prompt="solve this",
+            raw_xml="",
+            prompts={"default": "solve this"},
+        )
+        with pytest.raises(ValueError, match="thought_step.*evaluate_step.*synthesize"):
+            await engine.execute(result)
+
+    @pytest.mark.asyncio
+    async def test_simplified_tot_missing_prompts(self):
+        """Simplified ToT engine rejects spec with only default prompt."""
+        from promptspec.engines.tree_of_thought import SimplifiedTreeOfThoughtEngine
+        engine = SimplifiedTreeOfThoughtEngine(client=MockLLMClient(["x"] * 5))
         result = CompositionResult(
             composed_prompt="solve this",
             raw_xml="",
@@ -593,17 +654,18 @@ class TestPromptValidation:
 
     @pytest.mark.asyncio
     async def test_tree_of_thought_with_all_prompts(self):
-        """ToT engine accepts spec with all required prompts."""
+        """Full ToT engine accepts spec with all required prompts."""
         from promptspec.engines.tree_of_thought import TreeOfThoughtEngine
-        engine = TreeOfThoughtEngine(client=MockLLMClient(["x"] * 5))
+        engine = TreeOfThoughtEngine(client=MockLLMClient(["x"] * 20))
         result = CompositionResult(
             composed_prompt="",
             raw_xml="",
             prompts={
-                "generate": "gen {{branching_factor}}",
-                "evaluate": "eval {{candidates}}",
-                "synthesize": "synth {{best_approach}}",
+                "thought_step": "Given: {{state}}\nNext step.",
+                "evaluate_step": "Evaluate: {{state}}",
+                "synthesize": "Best: {{best_path}}",
             },
+            execution={"max_depth": 1, "branching_factor": 1, "beam_width": 1},
         )
         exec_result = await engine.execute(result)
         assert exec_result.output

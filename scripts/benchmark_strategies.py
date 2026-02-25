@@ -176,6 +176,7 @@ def create_benchmark_model(
     if strategy_type != "single-call":
         from ellements.patterns import (
             SelfConsistencyStrategy,
+            SimplifiedTreeOfThoughtStrategy,
             SingleCallStrategy,
             TreeOfThoughtStrategy,
             ReflectionStrategy,
@@ -184,6 +185,7 @@ def create_benchmark_model(
             "single-call": SingleCallStrategy,
             "self-consistency": SelfConsistencyStrategy,
             "tree-of-thought": TreeOfThoughtStrategy,
+            "simplified-tree-of-thought": SimplifiedTreeOfThoughtStrategy,
             "reflection": ReflectionStrategy,
         }
         strategy_cls = strategy_map.get(strategy_type)

@@ -9,7 +9,7 @@ from .registry import resolve_engine
 from .reflection import ReflectionEngine
 from .self_consistency import SelfConsistencyEngine
 from .single_call import SingleCallEngine
-from .tree_of_thought import TreeOfThoughtEngine
+from .tree_of_thought import TreeOfThoughtEngine, SimplifiedTreeOfThoughtEngine
 
 __all__ = [
     "BaseEngine",
@@ -19,6 +19,7 @@ __all__ = [
     "ReflectionEngine",
     "RuntimeConfig",
     "SelfConsistencyEngine",
+    "SimplifiedTreeOfThoughtEngine",
     "SingleCallEngine",
     "TreeOfThoughtEngine",
     "resolve_engine",
