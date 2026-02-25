@@ -1,0 +1,17 @@
+# Contrastive Mining — Runtime Config
+
+engine: reflection
+
+engine_config:
+  max_iterations: 2
+
+prompts:
+  generate:
+    model: gpt-4.1
+    temperature: 0.4
+  critique:
+    model: gpt-4.1
+    temperature: 0.2
+  revise:
+    model: gpt-4.1
+    temperature: 0.3
