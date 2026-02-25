@@ -14,6 +14,7 @@ from typing import Optional
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, ScrollableContainer
+from textual.theme import Theme
 from textual.widgets import Button, Footer, Header, Static, LoadingIndicator
 
 from promptspec.tui.scanner import SpecMetadata, scan_spec
@@ -21,6 +22,22 @@ from promptspec.tui.screens.input import InputForm
 from promptspec.tui.widgets.preview import PreviewPane
 from promptspec.tui.widgets.spec_info import SpecInfoPanel
 from promptspec.tui.widgets.step_log import StepLog
+
+# Golden theme inspired by the @execute directive color (#FFD700)
+PROMPTSPEC_THEME = Theme(
+    name="promptspec-gold",
+    primary="#FFD700",       # gold
+    secondary="#FFA500",     # orange (prompt directive)
+    accent="#E6BE00",        # darker gold
+    warning="#FFA500",
+    error="#FF6B6B",
+    success="#50C878",       # emerald green
+    foreground="#F5F0E1",    # warm white
+    background="#1A1612",    # very dark warm brown
+    surface="#241E18",       # dark brown
+    panel="#2E2720",         # slightly lighter brown
+    dark=True,
+)
 
 
 class PromptSpecApp(App):
@@ -43,6 +60,8 @@ class PromptSpecApp(App):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        self.register_theme(PROMPTSPEC_THEME)
+        self.theme = "promptspec-gold"
         self._spec_path = spec_path
         self._vars_path = vars_path
         self._config_path = config_path

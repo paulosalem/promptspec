@@ -115,11 +115,14 @@ Switch {
 }
 
 #btn-compose {
-    background: $primary;
+    background: $secondary;
+    color: #1A1612;
 }
 
 #btn-run {
-    background: $success;
+    background: $primary;
+    color: #1A1612;
+    text-style: bold;
 }
 
 #btn-quit {
