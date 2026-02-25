@@ -53,12 +53,14 @@ The benchmark runner has its OWN retry loop (5 attempts) as a safety net, but th
 
 | File | Strategy | Notes |
 |------|----------|-------|
-| `chain-of-thought.promptspec.md` | single-call | Also used as `@refine` target by SC. Has `@note` citing Wei et al. 2022 / Kojima et al. 2022 |
+| `chain-of-thought.promptspec.md` | single-call | Also used as `@refine` target by SC. `@note` citing Wei et al. 2022 / Kojima et al. 2022 |
 | `self-consistency-solver.promptspec.md` | self-consistency | `@note` cites Wang et al. 2022. Output format: number only |
-| `tree-of-thought-solver.promptspec.md` | tree-of-thought | `@note` cites Yao et al. 2023. Root text cascading. Parallel independent paths |
+| `tree-of-thought-solver.promptspec.md` | tree-of-thought | Full BFS/DFS algorithm (Yao et al. 2023). Step-level thought decomposition + intermediate evaluation. Expensive (~90 calls/problem) |
+| `simplified-tree-of-thought-solver.promptspec.md` | simplified-tree-of-thought | Generate → evaluate → synthesize with complete solutions. Cheap (~5 calls/problem). Used in benchmark demos |
+| `reflection-solver.promptspec.md` | reflection | Generate → critique → revise loop. `@note` cites Shinn et al. 2023 / Madaan et al. 2023 |
 
 ## Test Commands
 
 ```bash
-python -m pytest tests/ -q    # ~94 passed, ~105 skipped
+python -m pytest tests/ -q    # ~96 passed, ~105 skipped
 ```

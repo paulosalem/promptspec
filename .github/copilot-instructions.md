@@ -33,8 +33,10 @@ PromptSpec is a prompt specification language and toolchain for composing, execu
 ### Strategy Integration
 
 - Strategies come from the `ellements` library (`ellements.patterns.*`)
-- The `@execute` directive maps to strategy types: `single-call`, `self-consistency`, `tree-of-thought`, `reflection`
-- Strategy configs (branching_factor, samples, temperature) go in the `@execute` block as indented key-value params
+- The `@execute` directive maps to strategy types: `single-call`, `self-consistency`, `tree-of-thought`, `simplified-tree-of-thought`, `reflection`
+- `tree-of-thought` = full BFS/DFS algorithm (canonical Yao et al. 2023, expensive ~90 calls/problem)
+- `simplified-tree-of-thought` = generate→evaluate→synthesize (~5 calls/problem, used in benchmark demos)
+- Strategy configs (branching_factor, samples, temperature, max_depth, beam_width, search_type) go in the `@execute` block as indented key-value params
 
 ## Critical Patterns
 
