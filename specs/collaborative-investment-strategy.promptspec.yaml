@@ -1,0 +1,22 @@
+# Collaborative Investment Strategy — Runtime Config
+
+engine: collaborative
+
+engine_config:
+  max_rounds: 4
+
+prompts:
+  generate:
+    model: gpt-4.1
+    temperature: 0.7
+  continue:
+    model: gpt-4.1
+    temperature: 0.5
+
+variables:
+  investor_profile: "35-year-old software engineer, dual income household, no dependents"
+  horizon: "20 years (retirement target age 55)"
+  risk_tolerance: "Moderate-aggressive"
+  starting_capital: "$150,000 + $3,000/month"
+  goal: "Reach $2M for early retirement (4% SWR)"
+  constraints: "No crypto, no individual stocks, prefer low-cost index funds, ESG preference"
