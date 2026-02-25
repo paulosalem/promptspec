@@ -11,7 +11,8 @@ class StepLog(RichLog):
 
     DEFAULT_CSS = """
     StepLog {
-        height: 1fr;
+        height: auto;
+        max-height: 12;
         border: round $primary-darken-1;
         padding: 1;
     }

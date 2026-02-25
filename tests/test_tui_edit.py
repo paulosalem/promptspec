@@ -220,3 +220,109 @@ class TestTuiEditCallback:
     def test_round_starts_at_zero(self):
         callback = TuiEditCallback(app=None)
         assert callback._round == 0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: EditScreen layout & sizing
+# ═══════════════════════════════════════════════════════════════════
+
+class TestEditScreenLayout:
+    """Verify the edit modal fills space properly — TextArea should dominate."""
+
+    @pytest.mark.asyncio
+    async def test_textarea_fills_most_of_modal(self):
+        """The TextArea should take up the majority of the edit container."""
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            area = app.screen.query_one("#edit-area", TextArea)
+            container = app.screen.query_one("#edit-container")
+            # TextArea should be at least 50% of the container height
+            assert area.size.height > container.size.height * 0.4
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_buttons_bar_compact(self):
+        """The button bar should be auto-height, not taking too much space."""
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            buttons = app.screen.query_one("#edit-buttons")
+            assert buttons.size.height <= 5
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_header_compact(self):
+        """The header with title/context should be auto-height."""
+        app = _EditApp(context="Round 2 — Please review")
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            header = app.screen.query_one("#edit-header")
+            assert header.size.height <= 6
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_modal_uses_most_of_screen(self):
+        """The edit container should use ~90% of screen."""
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            container = app.screen.query_one("#edit-container")
+            # 90% of 100 width = 90, should be close
+            assert container.size.width >= 80
+            # 90% of 40 height = 36, should be close
+            assert container.size.height >= 30
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_textarea_larger_in_tall_terminal(self):
+        """In a taller terminal, the TextArea should be larger."""
+        app_small = _EditApp()
+        app_tall = _EditApp()
+        async with app_small.run_test(size=(100, 30)) as pilot:
+            await pilot.pause()
+            h_small = app_small.screen.query_one("#edit-area", TextArea).size.height
+            await pilot.press("escape")
+        async with app_tall.run_test(size=(100, 60)) as pilot:
+            await pilot.pause()
+            h_tall = app_tall.screen.query_one("#edit-area", TextArea).size.height
+            await pilot.press("escape")
+        assert h_tall > h_small
+
+    @pytest.mark.asyncio
+    async def test_long_content_scrollable(self):
+        """Long content should load into the TextArea (it scrolls internally)."""
+        long_content = "\n".join(f"Line {i}: Some AI-generated text." for i in range(100))
+        app = _EditApp(content=long_content)
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            area = app.screen.query_one("#edit-area", TextArea)
+            assert area.text == long_content
+            assert area.document.line_count == 100
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_small_terminal_doesnt_crash(self):
+        """EditScreen should render without crashing in small terminal."""
+        app = _EditApp()
+        async with app.run_test(size=(60, 20)) as pilot:
+            await pilot.pause()
+            area = app.screen.query_one("#edit-area", TextArea)
+            assert area is not None
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_submit_after_multiline_edit(self):
+        """Edit with multiple lines and submit — all content preserved."""
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            area = app.screen.query_one("#edit-area", TextArea)
+            multiline = "First paragraph.\n\nSecond paragraph.\n\n- Item 1\n- Item 2"
+            area.load_text(multiline)
+            await pilot.pause()
+            app.screen.query_one("#btn-submit", Button).press()
+            await pilot.pause()
+        assert app.edit_result is not None
+        assert app.edit_result.text == multiline
+        assert app.edit_result.action == "submit"

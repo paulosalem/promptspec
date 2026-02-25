@@ -170,6 +170,7 @@ class PromptSpecApp(App):
         try:
             from promptspec.controller import PromptSpecConfig, PromptSpecController
             from promptspec.engines import resolve_engine
+            from promptspec.engines.base import RuntimeConfig
 
             config = self._build_config()
             controller = PromptSpecController(config)
@@ -189,6 +190,18 @@ class PromptSpecApp(App):
 
             engine = resolve_engine(strategy)
 
+            # Build runtime config — inject TUI edit callback for collaborative
+            runtime_config = RuntimeConfig(engine=strategy)
+            if strategy == "collaborative":
+                from promptspec.tui.callbacks import TuiEditCallback
+                done_signal = "DONE"
+                if self._metadata.execution:
+                    done_signal = self._metadata.execution.get("done_signal", "DONE")
+                runtime_config.engine_config["edit_callback"] = TuiEditCallback(
+                    self, done_signal=done_signal,
+                )
+                log.add_info("Collaborative mode — edit in the pop-up editor")
+
             # Execute with step callback
             def on_step(step):
                 step_name = getattr(step, "name", "step")
@@ -196,7 +209,9 @@ class PromptSpecApp(App):
                 step_meta = getattr(step, "metadata", None)
                 log.add_step(step_name, step_text, step_meta)
 
-            exec_result = await engine.execute(composed, on_step=on_step)
+            exec_result = await engine.execute(
+                composed, config=runtime_config, on_step=on_step,
+            )
 
             # Show final result
             preview = self.query_one("#preview-pane", PreviewPane)

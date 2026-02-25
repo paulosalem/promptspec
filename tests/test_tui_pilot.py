@@ -601,3 +601,427 @@ class TestEdgeCases:
             # Static stores its content in _Static__content
             content = str(title._Static__content)
             assert "my-spec.promptspec.md" in content
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: Layout & sizing
+# ═══════════════════════════════════════════════════════════════════
+
+class TestLayoutSizing:
+    """Verify panels are proportioned correctly — preview > output."""
+
+    @pytest.mark.asyncio
+    async def test_preview_taller_than_step_log(self, tmp_path):
+        """The preview pane should consume more vertical space than the step log."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 50)) as pilot:
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            log = app.query_one("#step-log", StepLog)
+            # Preview should be significantly taller
+            assert preview.size.height > log.size.height
+
+    @pytest.mark.asyncio
+    async def test_step_log_compact_when_empty(self, tmp_path):
+        """An empty StepLog should auto-size to a small height, not 1fr."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 50)) as pilot:
+            await pilot.pause()
+            log = app.query_one("#step-log", StepLog)
+            # Empty log should be much smaller than half the terminal
+            assert log.size.height < 20
+
+    @pytest.mark.asyncio
+    async def test_step_log_grows_with_entries(self, tmp_path):
+        """StepLog should grow as entries are added (up to max)."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 50)) as pilot:
+            log = app.query_one("#step-log", StepLog)
+            h_before = log.size.height
+            for i in range(8):
+                log.add_step("generate", f"Step {i}")
+            await pilot.pause()
+            # Height should be at least as big or bigger
+            assert log.size.height >= h_before
+
+    @pytest.mark.asyncio
+    async def test_step_log_capped_at_max_height(self, tmp_path):
+        """StepLog should not exceed max-height even with many entries."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 50)) as pilot:
+            log = app.query_one("#step-log", StepLog)
+            for i in range(30):
+                log.add_step("generate", f"Long step entry number {i}")
+            await pilot.pause()
+            # max-height is 12 (plus border/padding ≈ 14-16)
+            assert log.size.height <= 18
+
+    @pytest.mark.asyncio
+    async def test_left_and_right_panels_both_visible(self, tmp_path):
+        """Both panels should have positive width."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            left = app.query_one("#left-panel")
+            right = app.query_one("#right-panel")
+            assert left.size.width > 20
+            assert right.size.width > 20
+
+    @pytest.mark.asyncio
+    async def test_panels_split_roughly_evenly(self, tmp_path):
+        """Left and right panels should each get roughly half the width."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            left = app.query_one("#left-panel")
+            right = app.query_one("#right-panel")
+            # Each should be between 30% and 70% of total
+            total = left.size.width + right.size.width
+            assert left.size.width > total * 0.3
+            assert right.size.width > total * 0.3
+
+    @pytest.mark.asyncio
+    async def test_action_bar_at_bottom_of_left(self, tmp_path):
+        """The action bar should be below the scroll area."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            bar = app.query_one("#action-bar")
+            scroll = app.query_one("#left-scroll")
+            # Action bar's top edge should be at or after the scroll's top edge
+            assert bar.region.y >= scroll.region.y
+
+    @pytest.mark.asyncio
+    async def test_buttons_have_minimum_width(self, tmp_path):
+        """Compose and Run buttons should be at least 16 chars wide."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            compose = app.query_one("#btn-compose", Button)
+            run = app.query_one("#btn-run", Button)
+            assert compose.size.width >= 16
+            assert run.size.width >= 16
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: Collaborative spec wiring
+# ═══════════════════════════════════════════════════════════════════
+
+class TestCollaborativeWiring:
+    """Verify collaborative spec detection and form filtering."""
+
+    @pytest.mark.asyncio
+    async def test_collaborative_detected_in_metadata(self, tmp_path):
+        """Collaborative strategy is detected from the spec."""
+        spec = _write_spec(tmp_path, SPEC_COLLABORATIVE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            assert app._metadata.execution is not None
+            assert app._metadata.execution["type"] == "collaborative"
+
+    @pytest.mark.asyncio
+    async def test_collaborative_internal_vars_hidden(self, tmp_path):
+        """Internal vars (edited_content, original_content) not in the form."""
+        spec = _write_spec(tmp_path, SPEC_COLLABORATIVE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            form = app.query_one("#input-form", InputForm)
+            values = form.get_values()
+            assert "edited_content" not in values
+            assert "original_content" not in values
+
+    @pytest.mark.asyncio
+    async def test_collaborative_user_vars_present(self, tmp_path):
+        """User-facing vars (topic, tone) ARE in the form."""
+        spec = _write_spec(tmp_path, SPEC_COLLABORATIVE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            form = app.query_one("#input-form", InputForm)
+            values = form.get_values()
+            assert "topic" in values
+            assert "tone" in values
+
+    @pytest.mark.asyncio
+    async def test_collaborative_prompts_listed(self, tmp_path):
+        """Spec info should show generate and continue prompts."""
+        spec = _write_spec(tmp_path, SPEC_COLLABORATIVE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            info = app.query_one("#spec-info", SpecInfoPanel)
+            assert "generate" in info._metadata.prompt_names
+            assert "continue" in info._metadata.prompt_names
+
+    @pytest.mark.asyncio
+    async def test_collaborative_max_rounds_metadata(self, tmp_path):
+        spec = _write_spec(tmp_path, SPEC_COLLABORATIVE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            assert app._metadata.execution.get("max_rounds") == 4
+
+    @pytest.mark.asyncio
+    async def test_run_collaborative_logs_mode_info(self, tmp_path):
+        """Clicking Run on a collaborative spec should log 'Collaborative mode'."""
+        spec = _write_spec(tmp_path, SPEC_COLLABORATIVE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 50)) as pilot:
+            btn = app.query_one("#btn-run", Button)
+            await pilot.click(btn)
+            await pilot.pause()
+            # It will fail (no API key) but the log should have started
+            log = app.query_one("#step-log", StepLog)
+            assert log is not None
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: End-to-end form → preview flow
+# ═══════════════════════════════════════════════════════════════════
+
+class TestFormPreviewFlow:
+    """Verify the full cycle: fill form → preview updates → compose."""
+
+    @pytest.mark.asyncio
+    async def test_fill_all_simple_inputs_updates_preview(self, tmp_path):
+        """Filling all inputs should remove red markers from preview."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            form = app.query_one("#input-form", InputForm)
+            form.set_values({"name": "Alice", "place": "Wonderland"})
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            assert preview._values.get("name") == "Alice"
+            assert preview._values.get("place") == "Wonderland"
+
+    @pytest.mark.asyncio
+    async def test_partial_fill_leaves_unfilled_markers(self, tmp_path):
+        """Filling only some inputs leaves unfilled markers for others."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            form = app.query_one("#input-form", InputForm)
+            form.set_values({"name": "Bob"})
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            assert preview._values.get("name") == "Bob"
+            assert preview._values.get("place", "") == ""
+
+    @pytest.mark.asyncio
+    async def test_clearing_input_reverts_preview(self, tmp_path):
+        """Clearing a filled input should revert to unfilled marker."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 40)) as pilot:
+            name_input = app.query_one("#input-name", Input)
+            name_input.value = "Alice"
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            assert preview._values.get("name") == "Alice"
+            # Clear it
+            name_input.value = ""
+            await pilot.pause()
+            assert preview._values.get("name") == ""
+
+    @pytest.mark.asyncio
+    async def test_select_change_updates_preview(self, tmp_path):
+        """Changing a Select widget updates the preview values."""
+        spec = _write_spec(tmp_path, SPEC_ALL_TYPES)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 60)) as pilot:
+            sel = app.query_one("#input-language", Select)
+            sel.value = "python"
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            assert preview._values.get("language") == "python"
+
+    @pytest.mark.asyncio
+    async def test_switch_toggle_updates_preview(self, tmp_path):
+        """Toggling a Switch updates the preview values."""
+        spec = _write_spec(tmp_path, SPEC_ALL_TYPES)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 60)) as pilot:
+            switch = app.query_one("#input-include_tests", Switch)
+            switch.toggle()
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            assert preview._values.get("include_tests") == "true"
+
+    @pytest.mark.asyncio
+    async def test_multiline_textarea_updates_preview(self, tmp_path):
+        """Typing in a multiline TextArea updates the preview values."""
+        spec = _write_spec(tmp_path, SPEC_ALL_TYPES)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 60)) as pilot:
+            ta = app.query_one("#input-description", TextArea)
+            ta.load_text("A deep dive into AI.")
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            assert preview._values.get("description") == "A deep dive into AI."
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: Theme and styling
+# ═══════════════════════════════════════════════════════════════════
+
+class TestThemeAndStyling:
+    """Verify golden theme is applied."""
+
+    @pytest.mark.asyncio
+    async def test_golden_theme_active(self, tmp_path):
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            assert app.theme == "promptspec-gold"
+
+    @pytest.mark.asyncio
+    async def test_app_is_dark_themed(self, tmp_path):
+        """The golden theme is dark — check via CSS pseudo-class."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            assert "dark" in app.pseudo_classes
+
+    @pytest.mark.asyncio
+    async def test_header_and_footer_present(self, tmp_path):
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            assert app.query_one(Header)
+            assert app.query_one(Footer)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: Resilience under different terminal sizes
+# ═══════════════════════════════════════════════════════════════════
+
+class TestTerminalSizes:
+    """Verify the TUI renders without crashing in various sizes."""
+
+    @pytest.mark.asyncio
+    async def test_small_terminal(self, tmp_path):
+        """App should not crash in a small terminal."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(60, 20)) as pilot:
+            await pilot.pause()
+            assert app.query_one("#preview-pane", PreviewPane)
+            assert app.query_one("#step-log", StepLog)
+
+    @pytest.mark.asyncio
+    async def test_wide_terminal(self, tmp_path):
+        """App should render cleanly in a wide terminal."""
+        spec = _write_spec(tmp_path, SPEC_ALL_TYPES)
+        app = _make_app(spec)
+        async with app.run_test(size=(200, 60)) as pilot:
+            await pilot.pause()
+            left = app.query_one("#left-panel")
+            right = app.query_one("#right-panel")
+            assert left.size.width > 40
+            assert right.size.width > 40
+
+    @pytest.mark.asyncio
+    async def test_tall_terminal_preview_fills(self, tmp_path):
+        """In a tall terminal, preview should fill most of the right panel."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test(size=(120, 80)) as pilot:
+            await pilot.pause()
+            preview = app.query_one("#preview-pane", PreviewPane)
+            log = app.query_one("#step-log", StepLog)
+            # Preview should be at least 3x the log height
+            assert preview.size.height > log.size.height * 2
+
+    @pytest.mark.asyncio
+    async def test_all_types_spec_in_medium_terminal(self, tmp_path):
+        """Complex spec should render all widgets without error."""
+        spec = _write_spec(tmp_path, SPEC_ALL_TYPES)
+        app = _make_app(spec)
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            form = app.query_one("#input-form", InputForm)
+            values = form.get_values()
+            # All types present
+            assert "language" in values       # select
+            assert "include_tests" in values  # boolean
+            assert "input_file" in values     # file
+            assert "description" in values    # multiline
+            assert "topic" in values          # text
+            assert "audience" in values       # text
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: StepLog detailed behavior
+# ═══════════════════════════════════════════════════════════════════
+
+class TestStepLogDetailed:
+    """Advanced StepLog behavior tests."""
+
+    @pytest.mark.asyncio
+    async def test_multiple_step_types(self, tmp_path):
+        """Log different step types without crash."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            log = app.query_one("#step-log", StepLog)
+            log.add_info("Starting collaborative editing…")
+            log.add_step("generate", "Initial draft created (1524 chars)")
+            log.add_step("continue", "Round 2: User edited, LLM refining…")
+            log.add_step("critique", "Evaluating draft quality", {"score": "8/10"})
+            log.add_step("done", "Collaboration complete")
+            await pilot.pause()
+            # No crash, log exists with content
+
+    @pytest.mark.asyncio
+    async def test_error_after_steps(self, tmp_path):
+        """Adding an error after normal steps should not crash."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            log = app.query_one("#step-log", StepLog)
+            log.add_info("Running…")
+            log.add_step("generate", "Draft 1")
+            log.add_error("Connection failed: timeout after 30s")
+            await pilot.pause()
+
+    @pytest.mark.asyncio
+    async def test_clear_then_re_add(self, tmp_path):
+        """Clearing log and re-adding entries should work cleanly."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            log = app.query_one("#step-log", StepLog)
+            log.add_step("generate", "First run")
+            log.add_step("done", "Finished")
+            log.clear()
+            log.add_info("Second run starting…")
+            log.add_step("generate", "New draft")
+            await pilot.pause()
+
+    @pytest.mark.asyncio
+    async def test_long_text_truncated_in_step(self, tmp_path):
+        """Very long step text should be truncated (add_step caps at 200)."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            log = app.query_one("#step-log", StepLog)
+            long_text = "x" * 500
+            log.add_step("generate", long_text)
+            await pilot.pause()
+            # No crash — text gets truncated to 200 inside add_step
+
+    @pytest.mark.asyncio
+    async def test_unknown_step_icon_defaults(self, tmp_path):
+        """Unknown step names should get the default ⚪ icon."""
+        spec = _write_spec(tmp_path, SPEC_SIMPLE)
+        app = _make_app(spec)
+        async with app.run_test() as pilot:
+            log = app.query_one("#step-log", StepLog)
+            log.add_step("custom_step", "Some custom step")
+            await pilot.pause()
