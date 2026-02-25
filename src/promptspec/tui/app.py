@@ -55,12 +55,13 @@ class PromptSpecApp(App):
 
         with Horizontal(id="main-container"):
             # Left: spec info + input form
-            with ScrollableContainer(id="left-panel"):
-                yield SpecInfoPanel(self._metadata, id="spec-info")
-                yield Static("[bold]Inputs[/bold]", markup=True)
-                yield InputForm(self._metadata.inputs, id="input-form")
+            with Vertical(id="left-panel"):
+                with ScrollableContainer(id="left-scroll"):
+                    yield SpecInfoPanel(self._metadata, id="spec-info")
+                    yield Static("[bold]Inputs[/bold]", markup=True)
+                    yield InputForm(self._metadata.inputs, id="input-form")
 
-                # Action buttons
+                # Action buttons (outside scroll, fixed at bottom)
                 with Horizontal(id="action-bar"):
                     yield Button("Compose", id="btn-compose", variant="primary")
                     yield Button("▶ Run", id="btn-run", variant="success")
@@ -123,8 +124,7 @@ class PromptSpecApp(App):
 
         values = self._get_form_values()
         try:
-            from promptspec.config import PromptSpecConfig
-            from promptspec.controller import PromptSpecController
+            from promptspec.controller import PromptSpecConfig, PromptSpecController
 
             config = self._build_config()
             controller = PromptSpecController(config)
@@ -148,8 +148,7 @@ class PromptSpecApp(App):
 
         values = self._get_form_values()
         try:
-            from promptspec.config import PromptSpecConfig
-            from promptspec.controller import PromptSpecController
+            from promptspec.controller import PromptSpecConfig, PromptSpecController
             from promptspec.engines.registry import get_engine
 
             config = self._build_config()
@@ -209,7 +208,7 @@ class PromptSpecApp(App):
 
     def _build_config(self):
         """Build a PromptSpecConfig, optionally loading YAML config."""
-        from promptspec.config import PromptSpecConfig
+        from promptspec.controller import PromptSpecConfig
 
         if self._config_path and self._config_path.exists():
             return PromptSpecConfig.from_yaml(self._config_path)

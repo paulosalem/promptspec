@@ -25,6 +25,10 @@ Screen {
     width: 1fr;
     min-width: 30;
     border-right: thick $primary-darken-2;
+}
+
+#left-scroll {
+    height: 1fr;
     overflow-y: auto;
     padding: 1 2;
 }
@@ -98,11 +102,10 @@ Switch {
 
 /* ── Action bar ───────────────────────────────────── */
 #action-bar {
-    dock: bottom;
-    height: 3;
+    height: auto;
     layout: horizontal;
     align: center middle;
-    padding: 0 2;
+    padding: 1 2;
     background: $surface-darken-1;
 }
 

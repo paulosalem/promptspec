@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from rich.text import Text
 from textual.widgets import RichLog
 
 
@@ -35,10 +36,10 @@ class StepLog(RichLog):
         if metadata:
             meta_str = ", ".join(f"{k}={v}" for k, v in metadata.items())
             line += f" [dim]({meta_str})[/dim]"
-        self.write(line)
+        self.write(Text.from_markup(line))
 
     def add_error(self, text: str) -> None:
-        self.write(f"❌ [bold red]{text}[/bold red]")
+        self.write(Text.from_markup(f"❌ [bold red]{text}[/bold red]"))
 
     def add_info(self, text: str) -> None:
-        self.write(f"ℹ️  [dim]{text}[/dim]")
+        self.write(Text.from_markup(f"ℹ️  [dim]{text}[/dim]"))

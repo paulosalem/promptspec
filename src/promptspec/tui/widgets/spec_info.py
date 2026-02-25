@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from textual.app import ComposeResult
-from textual.containers import Vertical
 from textual.widgets import Static
 
 from promptspec.tui.scanner import SpecMetadata
@@ -22,11 +20,8 @@ class SpecInfoPanel(Static):
     """
 
     def __init__(self, metadata: SpecMetadata, **kwargs) -> None:
-        super().__init__(**kwargs)
+        super().__init__("", markup=True, **kwargs)
         self._metadata = metadata
-
-    def compose(self) -> ComposeResult:
-        yield Vertical(id="spec-info-content")
 
     def on_mount(self) -> None:
         m = self._metadata
@@ -65,5 +60,4 @@ class SpecInfoPanel(Static):
         n_inputs = len(m.inputs)
         lines.append(f"📋 Inputs: {n_inputs}")
 
-        content = self.query_one("#spec-info-content", Vertical)
-        content.mount(Static("\n".join(lines), markup=True))
+        self.update("\n".join(lines))
