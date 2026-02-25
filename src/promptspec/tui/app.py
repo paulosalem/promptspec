@@ -134,9 +134,10 @@ class PromptSpecApp(App):
                 base_dir=self._spec_path.parent,
             )
             # Show result in the preview
+            prompt_text = result.composed_prompt
             preview = self.query_one("#preview-pane", PreviewPane)
-            preview.update(f"[bold green]Composed prompt:[/bold green]\n\n{result}")
-            log.add_step("done", f"Composed ({len(result)} chars)")
+            preview.update(f"[bold green]Composed prompt:[/bold green]\n\n{prompt_text}")
+            log.add_step("done", f"Composed ({len(prompt_text)} chars)")
         except Exception as exc:
             log.add_error(str(exc))
 
@@ -149,7 +150,7 @@ class PromptSpecApp(App):
         values = self._get_form_values()
         try:
             from promptspec.controller import PromptSpecConfig, PromptSpecController
-            from promptspec.engines.registry import get_engine
+            from promptspec.engines import resolve_engine
 
             config = self._build_config()
             controller = PromptSpecController(config)
@@ -167,24 +168,20 @@ class PromptSpecApp(App):
             if self._metadata.execution:
                 strategy = self._metadata.execution.get("type", "single-call")
 
-            engine_cls = get_engine(strategy)
-            engine = engine_cls(config)
+            engine = resolve_engine(strategy)
 
             # Execute with step callback
             def on_step(step):
                 step_name = getattr(step, "name", "step")
-                step_text = getattr(step, "text", str(step))[:150]
+                step_text = getattr(step, "response", str(step))[:150]
                 step_meta = getattr(step, "metadata", None)
                 log.add_step(step_name, step_text, step_meta)
 
-            result = await engine.execute(
-                composed,
-                on_step=on_step if hasattr(engine, "execute") else None,
-            )
+            exec_result = await engine.execute(composed, on_step=on_step)
 
             # Show final result
             preview = self.query_one("#preview-pane", PreviewPane)
-            final_text = str(result)
+            final_text = exec_result.output
             preview.update(f"[bold green]Result:[/bold green]\n\n{final_text}")
             log.add_step("done", f"Finished ({len(final_text)} chars)")
 
