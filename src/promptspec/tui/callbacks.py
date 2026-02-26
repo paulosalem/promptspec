@@ -29,16 +29,26 @@ class TuiEditCallback:
         self._done_signal = done_signal
         self._round = 0
 
+    def _log(self, text: str) -> None:
+        """Write a progress message to the StepLog if available."""
+        try:
+            from promptspec.tui.widgets.step_log import StepLog
+            log = self._app.query_one("#step-log", StepLog)
+            log.add_info(text)
+        except Exception:
+            pass
+
     async def request_edit(self, content: str, context: str = "") -> str:
         """Push a modal EditScreen and wait for the user's response."""
         self._round += 1
         ctx = context or f"Round {self._round} — Review the AI-generated text and edit as needed."
 
+        self._log(f"✏️  Round {self._round} — Opening editor…")
+
         future: asyncio.Future[EditResult] = asyncio.get_running_loop().create_future()
 
         def _on_dismiss(result: EditResult | None) -> None:
             if result is None:
-                # Screen dismissed without result → treat as approve
                 future.set_result(EditResult(text=content, action="approve"))
             else:
                 future.set_result(result)
@@ -51,4 +61,16 @@ class TuiEditCallback:
         self._app.push_screen(screen, callback=_on_dismiss)
 
         result = await future
+
+        # Log what the user chose and what happens next
+        action = result.action
+        if action == "approve":
+            self._log("✓ Approved unchanged")
+        elif action == "submit":
+            self._log("✏ Edit submitted — waiting for LLM to continue…")
+        elif action == "done":
+            self._log("🏁 Done — finishing collaboration")
+        elif action == "abort":
+            self._log("✗ Aborted")
+
         return result.text
