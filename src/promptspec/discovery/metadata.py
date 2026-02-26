@@ -139,7 +139,9 @@ async def ensure_metadata(
     model : str
         LLM model to use for analysis.
     on_progress : callable, optional
-        Called with (current, total, spec_title) during analysis.
+        Called with (current, total, spec_title) for *every* spec —
+        both cached hits and freshly analyzed ones — so callers can
+        show a smooth progress bar over the whole catalog.
 
     Returns
     -------
@@ -150,10 +152,10 @@ async def ensure_metadata(
     to_analyze: List[SpecEntry] = []
 
     # Separate cached vs. needing analysis
+    progress_idx = 0
     for entry in entries:
         key = str(entry.path)
         if _is_cached(cache, entry):
-            # Reconstruct from cache
             d = cache[key]
             result[key] = SpecMetadataEntry(
                 content_hash=d.get("content_hash", ""),
@@ -167,18 +169,20 @@ async def ensure_metadata(
                 has_tools=d.get("has_tools", False),
                 computed_at=d.get("computed_at", ""),
             )
+            progress_idx += 1
+            if on_progress:
+                on_progress(progress_idx, len(entries), entry.title)
         else:
             to_analyze.append(entry)
 
     # Analyze uncached specs
     if to_analyze:
-        for i, entry in enumerate(to_analyze):
+        for entry in to_analyze:
             if on_progress:
-                on_progress(i + 1, len(to_analyze), entry.title)
+                on_progress(progress_idx + 1, len(entries), entry.title)
             try:
                 meta = await _analyze_spec(entry, model=model)
             except Exception:
-                # Fallback: basic metadata without LLM
                 meta = SpecMetadataEntry(
                     content_hash=entry.content_hash,
                     title=entry.title,
@@ -190,6 +194,7 @@ async def ensure_metadata(
             key = str(entry.path)
             result[key] = meta
             cache[key] = asdict(meta)
+            progress_idx += 1
 
         _save_cache(cache)
 

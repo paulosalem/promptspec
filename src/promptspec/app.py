@@ -458,15 +458,23 @@ async def run_discover(args: argparse.Namespace) -> int:
     cached_count = [0]
     analyzed_count = [0]
     progress = ui.show_metadata_progress_start(len(entries))
+    task_id = [None]
 
     def on_progress(current: int, total: int, title: str) -> None:
         analyzed_count[0] = current
+        if task_id[0] is not None:
+            progress.update(task_id[0], completed=current, description=f"[gold]Analyzing:[/gold] {title}")
 
-    metadata = await ensure_metadata(
-        entries,
-        model=args.model,
-        on_progress=on_progress,
-    )
+    with progress:
+        task_id[0] = progress.add_task("Analyzing specs…", total=len(entries))
+        metadata = await ensure_metadata(
+            entries,
+            model=args.model,
+            on_progress=on_progress,
+        )
+        # Mark any cached (not analyzed) specs as completed in the bar
+        progress.update(task_id[0], completed=len(entries))
+
     cached_count[0] = len(entries) - analyzed_count[0]
     ui.show_cache_summary(cached_count[0], analyzed_count[0], len(entries))
 

@@ -79,10 +79,11 @@ class DiscoveryChatUI:
         """Start a Rich progress bar for metadata analysis."""
         progress = Progress(
             SpinnerColumn("dots", style="gold"),
-            TextColumn("[gold]Analyzing specs…[/gold]"),
+            TextColumn("{task.description}"),
             BarColumn(bar_width=30, style="gold.dim", complete_style="gold"),
             TextColumn("[info]{task.completed}/{task.total}[/info]"),
             console=self.console,
+            transient=False,
         )
         return progress
 
