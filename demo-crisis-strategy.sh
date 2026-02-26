@@ -102,5 +102,5 @@ if [[ -n "$UI_FLAG" ]]; then
 else
   echo -e "${DIM}Running analysis…${RESET}"
   echo ""
-  exec promptspec "$SPEC" --vars-file "$VARS_FILE" $EXTRA_ARGS
+  exec promptspec "$SPEC" --run --verbose --vars-file "$VARS_FILE" $EXTRA_ARGS
 fi
