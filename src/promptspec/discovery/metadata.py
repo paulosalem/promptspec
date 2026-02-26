@@ -82,6 +82,8 @@ async def _analyze_spec(
     model: str = "gpt-4.1",
 ) -> SpecMetadataEntry:
     """Use the LLM to analyze a raw spec and produce metadata."""
+    import warnings
+
     from ellements.core.clients import LLMClient
 
     client = LLMClient(model=model, temperature=0.1)
@@ -90,12 +92,14 @@ async def _analyze_spec(
     raw = entry.raw_text[:8000]
     prompt = f"Analyze this prompt spec file:\n\n```\n{raw}\n```"
 
-    response = await client.complete(
-        messages=[
-            {"role": "system", "content": ANALYZE_SYSTEM_PROMPT},
-            {"role": "user", "content": prompt},
-        ]
-    )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*does not support parameters.*")
+        response = await client.complete(
+            messages=[
+                {"role": "system", "content": ANALYZE_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ]
+        )
 
     # Parse JSON from response
     text = response.text.strip()

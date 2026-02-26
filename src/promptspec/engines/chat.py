@@ -74,6 +74,8 @@ class ChatEngine:
             If a tool raises an exception to signal exit (e.g. SpecSelected),
             the exception is propagated. Otherwise returns None on normal exit.
         """
+        import warnings
+
         from ellements.core.clients import LLMClient
 
         client = LLMClient(model=self.model, temperature=0.3)
@@ -94,16 +96,18 @@ class ChatEngine:
             self.ui.show_thinking()
 
             try:
-                response = await client.complete_with_tools(
-                    messages=self.history,
-                    tools=self.tools,
-                    tool_executor=self._wrapped_executor,
-                )
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message=".*does not support parameters.*")
+                    response = await client.complete_with_tools(
+                        messages=self.history,
+                        tools=self.tools,
+                        tool_executor=self._wrapped_executor,
+                    )
             finally:
                 self.ui.hide_thinking()
 
             # Add assistant response to history
-            assistant_text = response.text
+            assistant_text = response.content
             self.history.append({"role": "assistant", "content": assistant_text})
 
             # Show the response
