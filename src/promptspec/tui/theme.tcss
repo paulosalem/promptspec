@@ -87,7 +87,7 @@ Input {
     margin-bottom: 1;
 }
 
-TextArea {
+TextArea.input-textarea {
     height: 6;
     margin-bottom: 1;
 }

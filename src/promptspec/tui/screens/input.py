@@ -72,6 +72,7 @@ class InputForm(Vertical):
         elif spec_input.input_type == "multiline":
             widget = TextArea(
                 id=widget_id,
+                classes="input-textarea",
             )
 
         elif spec_input.input_type == "file":

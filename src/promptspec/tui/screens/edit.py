@@ -139,7 +139,7 @@ class EditScreen(ModalScreen[EditResult]):
                         markup=True,
                     )
 
-            yield TextArea(id="edit-area")
+            yield TextArea(self._content, id="edit-area")
 
             yield Static(
                 "[dim]Escape = Approve unchanged  •  Ctrl+S = Submit edit[/dim]",
@@ -154,10 +154,8 @@ class EditScreen(ModalScreen[EditResult]):
                 yield Button("✗ Abort", id="btn-abort", variant="error")
 
     def on_mount(self) -> None:
-        """Pre-fill the TextArea with the LLM content."""
-        area = self.query_one("#edit-area", TextArea)
-        area.load_text(self._content)
-        area.focus()
+        """Focus the TextArea on mount."""
+        self.query_one("#edit-area", TextArea).focus()
 
     # ── Button handlers ───────────────────────────────────────────
 
