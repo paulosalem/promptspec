@@ -1,0 +1,8 @@
+{
+  "situation": "Google's core search and advertising business is under serious threat from AI startups (OpenAI/ChatGPT, Perplexity, Anthropic, etc.) that are rapidly capturing user attention and search intent. ChatGPT and Perplexity are becoming the first place many users go for information instead of Google Search. Meanwhile, AI-native coding tools (Cursor, Copilot) threaten Google's developer ecosystem, and new AI-powered consumer products are eroding Chrome and Android engagement among early adopters. Google's stock has shown volatility as investors question whether the company can defend its moat.",
+  "urgency": "medium-term",
+  "analysis_depth": "deep",
+  "additional_context": "Google has massive AI research talent (DeepMind, Google Brain), enormous compute infrastructure (TPUs, cloud), dominant distribution (Chrome, Android, Gmail, YouTube), and $100B+ in annual free cash flow. However, the company has a history of slow product launches, internal politics, and cancelled projects. Gemini has received mixed reviews compared to GPT-4 and Claude. Google's ad-driven business model creates a tension: AI answers that directly satisfy user queries reduce the opportunity to show ads.",
+  "constraints": "Cannot abandon the advertising business model overnight — it generates 80% of revenue. Regulatory scrutiny (antitrust cases in US and EU) limits aggressive acquisition strategy. Talent retention is a challenge as top AI researchers leave for startups offering equity upside.",
+  "enable_web_search": "false"
+}
