@@ -48,7 +48,7 @@ class PromptSpecApp(App):
 
     BINDINGS = [
         Binding("ctrl+c", "quit", "Quit", show=True),
-        Binding("ctrl+r", "run_spec", "Run", show=True),
+        Binding("ctrl+r", "run_spec", "Run", show=False),
         Binding("ctrl+p", "compose_spec", "Compose", show=True),
         Binding("ctrl+l", "toggle_left_panel", "Toggle Inputs", show=True),
     ]
