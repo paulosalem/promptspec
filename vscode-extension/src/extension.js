@@ -16,6 +16,7 @@ const { createDiagnosticsProvider } = require("./diagnostics");
 const { PromptSpecDefinitionProvider } = require("./definitions");
 const { PromptSpecDocumentSymbolProvider } = require("./symbols");
 const { PromptSpecFoldingRangeProvider } = require("./folding");
+const { registerRunCommands } = require("./run");
 
 // ── Decoration types ────────────────────────────────────────────
 
@@ -259,6 +260,9 @@ function activate(context) {
   context.subscriptions.push(
     vscode.languages.registerFoldingRangeProvider(selector, new PromptSpecFoldingRangeProvider())
   );
+
+  // ── Run commands (terminal integration) ────────────────────
+  registerRunCommands(context);
 }
 
 function deactivate() {}

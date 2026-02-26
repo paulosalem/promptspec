@@ -1,8 +1,8 @@
 {
   "name": "promptspec",
   "displayName": "PromptSpec Syntax",
-  "description": "Full language support for PromptSpec specification files (.promptspec.md) — completions, hover docs, diagnostics, go-to-definition, outline, and visual decorations.",
-  "version": "0.4.0",
+  "description": "Full language support for PromptSpec specification files (.promptspec.md) — completions, hover docs, diagnostics, go-to-definition, outline, visual decorations, and run commands.",
+  "version": "0.5.0",
   "publisher": "prompting-adventures",
   "license": "MIT",
   "repository": {
@@ -29,6 +29,135 @@
     "promptspec"
   ],
   "contributes": {
+    "commands": [
+      {
+        "command": "promptspec.compose",
+        "title": "PromptSpec: Compose",
+        "icon": "$(play)",
+        "category": "PromptSpec"
+      },
+      {
+        "command": "promptspec.run",
+        "title": "PromptSpec: Run",
+        "icon": "$(rocket)",
+        "category": "PromptSpec"
+      },
+      {
+        "command": "promptspec.openTUI",
+        "title": "PromptSpec: Open in TUI",
+        "icon": "$(terminal)",
+        "category": "PromptSpec"
+      },
+      {
+        "command": "promptspec.discover",
+        "title": "PromptSpec: Discover Specs",
+        "icon": "$(search)",
+        "category": "PromptSpec"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "promptspec.compose",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "navigation@1"
+        },
+        {
+          "command": "promptspec.run",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "navigation@2"
+        },
+        {
+          "command": "promptspec.openTUI",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "navigation@3"
+        },
+        {
+          "command": "promptspec.discover",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "navigation@4"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "promptspec.compose",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@1"
+        },
+        {
+          "command": "promptspec.run",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@2"
+        },
+        {
+          "command": "promptspec.openTUI",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@3"
+        },
+        {
+          "command": "promptspec.discover",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@4"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "promptspec.compose",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@1"
+        },
+        {
+          "command": "promptspec.run",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@2"
+        },
+        {
+          "command": "promptspec.openTUI",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@3"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "promptspec.compose",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "resourceFilename =~ /\\.promptspec\\.md$/"
+      },
+      {
+        "command": "promptspec.run",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "resourceFilename =~ /\\.promptspec\\.md$/"
+      },
+      {
+        "command": "promptspec.openTUI",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "resourceFilename =~ /\\.promptspec\\.md$/"
+      }
+    ],
+    "configuration": {
+      "title": "PromptSpec",
+      "properties": {
+        "promptspec.cliPath": {
+          "type": "string",
+          "default": "promptspec",
+          "description": "Path to the promptspec CLI executable."
+        },
+        "promptspec.defaultModel": {
+          "type": "string",
+          "default": "",
+          "description": "Default LLM model to use (e.g. gpt-4.1). Leave empty for CLI default."
+        },
+        "promptspec.extraArgs": {
+          "type": "string",
+          "default": "",
+          "description": "Additional CLI arguments appended to every command."
+        }
+      }
+    },
     "languages": [
       {
         "id": "promptspec",
