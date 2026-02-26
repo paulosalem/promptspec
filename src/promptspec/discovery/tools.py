@@ -30,14 +30,18 @@ DISCOVERY_TOOLS: List[Dict[str, Any]] = [
             "name": "search_catalog",
             "description": (
                 "Search the spec library by keyword. Returns matching specs "
-                "with title, summary, tags, and variable list."
+                "with title, summary, tags, and variable list. "
+                "Pass query='*' or query='' to list ALL available specs."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "Search keywords or natural-language query.",
+                        "description": (
+                            "Search keywords or natural-language query. "
+                            "Use '*' or '' to list all specs."
+                        ),
                     },
                     "category": {
                         "type": "string",
@@ -128,10 +132,22 @@ def _search_catalog(
     metadata: Dict[str, SpecMetadataEntry],
     args: Dict[str, Any],
 ) -> str:
-    """Fuzzy search over specs using query keywords."""
-    query = args.get("query", "").lower()
-    category_filter = args.get("category", "").lower()
-    keywords = query.split()
+    """Fuzzy search over specs using query keywords.
+
+    Special cases:
+    - query='*' or query='' → list all specs (up to 25)
+    - Broad/generic queries that match nothing → fall back to listing all
+    """
+    query = args.get("query", "").strip().lower()
+    category_filter = args.get("category", "").strip().lower()
+
+    list_all = query in ("", "*", "all", "list", "all specs", "list all")
+
+    if list_all and not category_filter:
+        # Return all specs (capped)
+        return _format_results(entries, metadata, max_results=25)
+
+    keywords = query.split() if not list_all else []
 
     scored: list[tuple[int, SpecEntry, Optional[SpecMetadataEntry]]] = []
 
@@ -152,6 +168,13 @@ def _search_catalog(
         if category_filter and meta:
             if category_filter not in meta.category.lower():
                 continue
+        elif category_filter and not meta:
+            continue
+
+        # If listing all (with category filter), include everything that passed
+        if list_all:
+            scored.append((1, entry, meta))
+            continue
 
         # Score: count keyword hits
         score = sum(1 for kw in keywords if kw in searchable)
@@ -160,13 +183,53 @@ def _search_catalog(
 
     # Sort by score descending
     scored.sort(key=lambda x: -x[0])
-    top = scored[:10]
+    top = scored[:25]
 
     if not top:
-        return "No matching specs found. Try different keywords."
+        # Fall back: return all specs so the user can browse
+        return _format_results(entries, metadata, max_results=15,
+                               header="No exact matches — here's what's available:")
 
+    return _format_scored_results(top)
+
+
+def _format_results(
+    entries: List[SpecEntry],
+    metadata: Dict[str, SpecMetadataEntry],
+    max_results: int = 25,
+    header: Optional[str] = None,
+) -> str:
+    """Format a list of spec entries as JSON."""
     results = []
-    for _, entry, meta in top:
+    for entry in entries[:max_results]:
+        key = str(entry.path)
+        meta = metadata.get(key)
+        item = {
+            "filename": entry.filename,
+            "title": entry.title,
+        }
+        if meta and meta.summary:
+            item["summary"] = meta.summary
+        if meta and meta.category:
+            item["category"] = meta.category
+        if meta and meta.tags:
+            item["tags"] = meta.tags
+        if entry.variables:
+            item["variables"] = entry.variables
+        results.append(item)
+
+    out = json.dumps(results, indent=2, ensure_ascii=False)
+    if header:
+        out = header + "\n" + out
+    return f"{len(entries)} specs available ({len(results)} shown):\n{out}"
+
+
+def _format_scored_results(
+    scored: list[tuple[int, SpecEntry, Optional[SpecMetadataEntry]]],
+) -> str:
+    """Format scored search results as JSON."""
+    results = []
+    for _, entry, meta in scored:
         item = {
             "filename": entry.filename,
             "title": entry.title,
