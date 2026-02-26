@@ -1,0 +1,8 @@
+{
+  "situation": "A major earthquake (7.2 magnitude) has struck 50km from our main manufacturing plant. The facility appears structurally intact but all road access is blocked by debris. 2,000 employees are on-site. Power is intermittent. We have contractual delivery obligations worth $40M due in 3 weeks.",
+  "urgency": "immediate",
+  "analysis_depth": "standard",
+  "additional_context": "We have a secondary facility in another state operating at 40% capacity. Emergency supplies on-site cover 72 hours. Local emergency services are overwhelmed.",
+  "constraints": "Insurance claims will take months. No helicopter landing pad on-site. Secondary facility lacks tooling for our flagship product line.",
+  "enable_web_search": "false"
+}
