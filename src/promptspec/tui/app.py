@@ -108,9 +108,9 @@ class PromptSpecApp(App):
                             id="current-text-pane",
                             read_only=True,
                         )
+                yield LoadingIndicator(id="llm-spinner")
                 yield Static("[bold]Status[/bold]", markup=True, id="output-title")
                 with Vertical(id="status-panel"):
-                    yield LoadingIndicator(id="llm-spinner")
                     yield StepLog(id="step-log")
 
         yield Footer()
