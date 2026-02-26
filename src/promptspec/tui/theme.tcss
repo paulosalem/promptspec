@@ -152,8 +152,6 @@ Switch {
 #current-text-pane {
     height: 1fr;
     border: round $primary-darken-1;
-    padding: 1;
-    overflow-y: auto;
 }
 
 #current-title {
@@ -180,6 +178,12 @@ Switch {
     text-style: bold;
     color: $text;
     margin-bottom: 1;
+}
+
+/* ── Status panel ─────────────────────────────────── */
+#status-panel {
+    height: auto;
+    max-height: 12;
 }
 
 /* ── Step log ─────────────────────────────────────── */

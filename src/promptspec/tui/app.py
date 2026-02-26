@@ -15,7 +15,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, ScrollableContainer
 from textual.theme import Theme
-from textual.widgets import Button, Footer, Header, Static, LoadingIndicator, TabbedContent, TabPane
+from textual.widgets import Button, Footer, Header, Static, LoadingIndicator, TabbedContent, TabPane, TextArea
 
 from promptspec.tui.scanner import SpecMetadata, scan_spec
 from promptspec.tui.screens.input import InputForm
@@ -51,6 +51,7 @@ class PromptSpecApp(App):
         Binding("ctrl+r", "run_spec", "Run", show=False),
         Binding("ctrl+p", "compose_spec", "Compose", show=True),
         Binding("ctrl+l", "toggle_left_panel", "Toggle Inputs", show=True),
+        Binding("ctrl+o", "toggle_status_panel", "Toggle Status", show=True),
     ]
 
     def __init__(
@@ -102,14 +103,15 @@ class PromptSpecApp(App):
                             markup=True,
                             id="current-title",
                         )
-                        yield Static(
-                            "[dim italic]No text yet — run the spec to see output here.[/dim italic]",
-                            markup=True,
+                        yield TextArea(
+                            "No text yet — run the spec to see output here.",
                             id="current-text-pane",
+                            read_only=True,
                         )
-                yield Static("[bold]Output[/bold]", markup=True, id="output-title")
-                yield LoadingIndicator(id="llm-spinner")
-                yield StepLog(id="step-log")
+                yield Static("[bold]Status[/bold]", markup=True, id="output-title")
+                with Vertical(id="status-panel"):
+                    yield LoadingIndicator(id="llm-spinner")
+                    yield StepLog(id="step-log")
 
         yield Footer()
 
@@ -154,6 +156,17 @@ class PromptSpecApp(App):
         """Show or hide the left input panel (Ctrl+L)."""
         panel = self.query_one("#left-panel")
         panel.display = not panel.display
+
+    def action_toggle_status_panel(self) -> None:
+        """Show or hide the status/output panel (Ctrl+O)."""
+        try:
+            title = self.query_one("#output-title")
+            panel = self.query_one("#status-panel")
+            vis = not panel.display
+            title.display = vis
+            panel.display = vis
+        except Exception:
+            pass
 
     async def _do_compose(self) -> None:
         """Compose the spec using the controller."""
@@ -227,6 +240,16 @@ class PromptSpecApp(App):
                 log.add_info("Collaborative mode — edit in the pop-up editor")
                 # Hide left panel to give full width to collaboration
                 self.query_one("#left-panel").display = False
+                # Switch to Current Text tab and collapse status panel
+                try:
+                    self.query_one("#right-tabs", TabbedContent).active = "tab-current"
+                except Exception:
+                    pass
+                try:
+                    self.query_one("#output-title").display = False
+                    self.query_one("#status-panel").display = False
+                except Exception:
+                    pass
 
             # Execute with step callback
             def on_step(step):
@@ -261,8 +284,8 @@ class PromptSpecApp(App):
     def _update_current_text(self, text: str) -> None:
         """Update the 'Current Text' tab pane with new content."""
         try:
-            pane = self.query_one("#current-text-pane", Static)
-            pane.update(text)
+            pane = self.query_one("#current-text-pane", TextArea)
+            pane.load_text(text)
         except Exception:
             pass
 
