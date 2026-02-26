@@ -612,15 +612,15 @@ class TestLayoutSizing:
 
     @pytest.mark.asyncio
     async def test_preview_taller_than_step_log(self, tmp_path):
-        """The preview pane should consume more vertical space than the step log."""
+        """The active tab content should consume more vertical space than the step log."""
         spec = _write_spec(tmp_path, SPEC_SIMPLE)
         app = _make_app(spec)
         async with app.run_test(size=(120, 50)) as pilot:
             await pilot.pause()
-            preview = app.query_one("#preview-pane", PreviewPane)
+            current_text = app.query_one("#current-text-pane")
             log = app.query_one("#step-log", StepLog)
-            # Preview should be significantly taller
-            assert preview.size.height > log.size.height
+            # Active tab content should be significantly taller
+            assert current_text.size.height > log.size.height
 
     @pytest.mark.asyncio
     async def test_step_log_compact_when_empty(self, tmp_path):
@@ -928,15 +928,15 @@ class TestTerminalSizes:
 
     @pytest.mark.asyncio
     async def test_tall_terminal_preview_fills(self, tmp_path):
-        """In a tall terminal, preview should fill most of the right panel."""
+        """In a tall terminal, the active tab should fill most of the right panel."""
         spec = _write_spec(tmp_path, SPEC_SIMPLE)
         app = _make_app(spec)
         async with app.run_test(size=(120, 80)) as pilot:
             await pilot.pause()
-            preview = app.query_one("#preview-pane", PreviewPane)
+            current_text = app.query_one("#current-text-pane")
             log = app.query_one("#step-log", StepLog)
-            # Preview should be at least 3x the log height
-            assert preview.size.height > log.size.height * 2
+            # Active tab should be at least 3x the log height
+            assert current_text.size.height > log.size.height * 2
 
     @pytest.mark.asyncio
     async def test_all_types_spec_in_medium_terminal(self, tmp_path):

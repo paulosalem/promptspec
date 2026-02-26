@@ -90,13 +90,6 @@ class PromptSpecApp(App):
             # Right: tabbed preview/current-text + output
             with Vertical(id="right-panel"):
                 with TabbedContent(id="right-tabs"):
-                    with TabPane("Preview", id="tab-preview"):
-                        yield Static(
-                            f"[bold]Preview[/bold] — {self._spec_path.name}",
-                            markup=True,
-                            id="preview-title",
-                        )
-                        yield PreviewPane(self._spec_text, id="preview-pane")
                     with TabPane("Current Text", id="tab-current"):
                         yield Static(
                             "[bold]Current Text[/bold] — updated after each round",
@@ -108,6 +101,13 @@ class PromptSpecApp(App):
                             id="current-text-pane",
                             read_only=True,
                         )
+                    with TabPane("Prompt Preview", id="tab-preview"):
+                        yield Static(
+                            f"[bold]Prompt Preview[/bold] — {self._spec_path.name}",
+                            markup=True,
+                            id="preview-title",
+                        )
+                        yield PreviewPane(self._spec_text, id="preview-pane")
                 yield LoadingIndicator(id="llm-spinner")
                 yield Static("[bold]Status[/bold]", markup=True, id="output-title")
                 with Vertical(id="status-panel"):
