@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/promptspec_banner_1.png" alt="PromptSpec" width="600">
+</p>
+
 # PromptSpec
 
 Compose prompts from specification files that use directives (`@refine`, `@if`, `@match`, `@tool`, `@note`), variables (`{{name}}`), and file includes — all processed by an LLM via multi-turn tool calling.
