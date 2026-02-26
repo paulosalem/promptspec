@@ -17,6 +17,7 @@ const { PromptSpecDefinitionProvider } = require("./definitions");
 const { PromptSpecDocumentSymbolProvider } = require("./symbols");
 const { PromptSpecFoldingRangeProvider } = require("./folding");
 const { registerRunCommands } = require("./run");
+const { registerFormPanel } = require("./form");
 
 // ── Decoration types ────────────────────────────────────────────
 
@@ -263,6 +264,9 @@ function activate(context) {
 
   // ── Run commands (terminal integration) ────────────────────
   registerRunCommands(context);
+
+  // ── Form panel (webview) ───────────────────────────────────
+  registerFormPanel(context);
 }
 
 function deactivate() {}

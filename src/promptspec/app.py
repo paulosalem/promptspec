@@ -137,6 +137,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Print resolved configuration and environment, then exit",
     )
 
+    # Machine-readable scan (used by VS Code extension)
+    parser.add_argument(
+        "--scan",
+        action="store_true",
+        help="Output spec metadata as JSON (inputs, title, execution strategy). Used by IDE integrations.",
+    )
+
     return parser
 
 
@@ -619,6 +626,25 @@ def cli() -> None:
         sys.exit(1)
 
     variables = _parse_variables(printer, args)
+
+    # --scan: output spec metadata as JSON and exit
+    if getattr(args, "scan", False):
+        from promptspec.tui.scanner import scan_spec
+        import dataclasses as _dc
+
+        meta = scan_spec(spec_text)
+        scan_data = {
+            "title": meta.title,
+            "description": meta.description,
+            "inputs": [_dc.asdict(i) for i in meta.inputs],
+            "execution": meta.execution,
+            "prompt_names": meta.prompt_names,
+            "tool_names": meta.tool_names,
+            "refine_files": meta.refine_files,
+            "embed_files": meta.embed_files,
+        }
+        print(json.dumps(scan_data, indent=2, ensure_ascii=False))
+        sys.exit(0)
 
     # TUI mode
     if getattr(args, "ui", False):

@@ -2,7 +2,7 @@
   "name": "promptspec",
   "displayName": "PromptSpec Syntax",
   "description": "Full language support for PromptSpec specification files (.promptspec.md) — completions, hover docs, diagnostics, go-to-definition, outline, visual decorations, and run commands.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "prompting-adventures",
   "license": "MIT",
   "repository": {
@@ -53,6 +53,12 @@
         "title": "PromptSpec: Discover Specs",
         "icon": "$(search)",
         "category": "PromptSpec"
+      },
+      {
+        "command": "promptspec.fillForm",
+        "title": "PromptSpec: Fill & Run (Form)",
+        "icon": "$(list-unordered)",
+        "category": "PromptSpec"
       }
     ],
     "menus": {
@@ -76,6 +82,11 @@
           "command": "promptspec.discover",
           "when": "resourceFilename =~ /\\.promptspec\\.md$/",
           "group": "navigation@4"
+        },
+        {
+          "command": "promptspec.fillForm",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "navigation@5"
         }
       ],
       "editor/context": [
@@ -98,6 +109,11 @@
           "command": "promptspec.discover",
           "when": "resourceFilename =~ /\\.promptspec\\.md$/",
           "group": "promptspec@4"
+        },
+        {
+          "command": "promptspec.fillForm",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@5"
         }
       ],
       "explorer/context": [
@@ -115,6 +131,11 @@
           "command": "promptspec.openTUI",
           "when": "resourceFilename =~ /\\.promptspec\\.md$/",
           "group": "promptspec@3"
+        },
+        {
+          "command": "promptspec.fillForm",
+          "when": "resourceFilename =~ /\\.promptspec\\.md$/",
+          "group": "promptspec@4"
         }
       ]
     },
@@ -135,6 +156,12 @@
         "command": "promptspec.openTUI",
         "key": "ctrl+shift+t",
         "mac": "cmd+shift+t",
+        "when": "resourceFilename =~ /\\.promptspec\\.md$/"
+      },
+      {
+        "command": "promptspec.fillForm",
+        "key": "ctrl+shift+f",
+        "mac": "cmd+shift+f",
         "when": "resourceFilename =~ /\\.promptspec\\.md$/"
       }
     ],
