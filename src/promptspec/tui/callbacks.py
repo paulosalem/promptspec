@@ -38,12 +38,25 @@ class TuiEditCallback:
         except Exception:
             pass
 
+    def _spinner(self, show: bool) -> None:
+        """Show or hide the loading spinner."""
+        try:
+            spinner = self._app.query_one("#llm-spinner")
+            if show:
+                spinner.add_class("active")
+            else:
+                spinner.remove_class("active")
+        except Exception:
+            pass
+
     async def request_edit(self, content: str, context: str = "") -> str:
         """Push a modal EditScreen and wait for the user's response."""
         self._round += 1
         ctx = context or f"Round {self._round} — Review the AI-generated text and edit as needed."
 
         self._log(f"✏️  Round {self._round} — Opening editor…")
+        # Hide spinner while user is editing
+        self._spinner(False)
 
         future: asyncio.Future[EditResult] = asyncio.get_running_loop().create_future()
 
@@ -68,6 +81,7 @@ class TuiEditCallback:
             self._log("✓ Approved unchanged")
         elif action == "submit":
             self._log("✏ Edit submitted — waiting for LLM to continue…")
+            self._spinner(True)
         elif action == "done":
             self._log("🏁 Done — finishing collaboration")
         elif action == "abort":

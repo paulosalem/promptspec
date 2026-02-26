@@ -15,7 +15,7 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, ScrollableContainer
 from textual.theme import Theme
-from textual.widgets import Button, Footer, Header, Static, LoadingIndicator
+from textual.widgets import Button, Footer, Header, Static, LoadingIndicator, TabbedContent, TabPane
 
 from promptspec.tui.scanner import SpecMetadata, scan_spec
 from promptspec.tui.screens.input import InputForm
@@ -85,15 +85,29 @@ class PromptSpecApp(App):
                     yield Button("Compose", id="btn-compose", variant="primary")
                     yield Button("▶ Run", id="btn-run", variant="success")
 
-            # Right: preview + output
+            # Right: tabbed preview/current-text + output
             with Vertical(id="right-panel"):
-                yield Static(
-                    f"[bold]Preview[/bold] — {self._spec_path.name}",
-                    markup=True,
-                    id="preview-title",
-                )
-                yield PreviewPane(self._spec_text, id="preview-pane")
+                with TabbedContent(id="right-tabs"):
+                    with TabPane("Preview", id="tab-preview"):
+                        yield Static(
+                            f"[bold]Preview[/bold] — {self._spec_path.name}",
+                            markup=True,
+                            id="preview-title",
+                        )
+                        yield PreviewPane(self._spec_text, id="preview-pane")
+                    with TabPane("Current Text", id="tab-current"):
+                        yield Static(
+                            "[bold]Current Text[/bold] — updated after each round",
+                            markup=True,
+                            id="current-title",
+                        )
+                        yield Static(
+                            "[dim italic]No text yet — run the spec to see output here.[/dim italic]",
+                            markup=True,
+                            id="current-text-pane",
+                        )
                 yield Static("[bold]Output[/bold]", markup=True, id="output-title")
+                yield LoadingIndicator(id="llm-spinner")
                 yield StepLog(id="step-log")
 
         yield Footer()
@@ -140,6 +154,7 @@ class PromptSpecApp(App):
         log = self.query_one("#step-log", StepLog)
         log.clear()
         log.add_info("Composing…")
+        self._show_spinner()
 
         values = self._get_form_values()
         try:
@@ -159,12 +174,15 @@ class PromptSpecApp(App):
             log.add_step("done", f"Composed ({len(prompt_text)} chars)")
         except Exception as exc:
             log.add_error(str(exc))
+        finally:
+            self._hide_spinner()
 
     async def _do_run(self) -> None:
         """Compose and execute the spec with the engine."""
         log = self.query_one("#step-log", StepLog)
         log.clear()
         log.add_info("Running…")
+        self._show_spinner()
 
         values = self._get_form_values()
         try:
@@ -208,21 +226,51 @@ class PromptSpecApp(App):
                 step_text = getattr(step, "response", str(step))[:150]
                 step_meta = getattr(step, "metadata", None)
                 log.add_step(step_name, step_text, step_meta)
+                # Update the "Current Text" pane with latest content
+                full_response = getattr(step, "response", "")
+                if full_response:
+                    self._update_current_text(full_response)
 
             exec_result = await engine.execute(
                 composed, config=runtime_config, on_step=on_step,
             )
 
             # Show final result
-            preview = self.query_one("#preview-pane", PreviewPane)
             final_text = exec_result.output
-            preview.update(f"[bold green]Result:[/bold green]\n\n{final_text}")
+            self._update_current_text(final_text)
+            # Auto-switch to Current Text tab
+            try:
+                self.query_one("#right-tabs", TabbedContent).active = "tab-current"
+            except Exception:
+                pass
             log.add_step("done", f"Finished ({len(final_text)} chars)")
 
         except Exception as exc:
             log.add_error(str(exc))
+        finally:
+            self._hide_spinner()
 
-    # ── Helpers ───────────────────────────────────────────────────
+    def _update_current_text(self, text: str) -> None:
+        """Update the 'Current Text' tab pane with new content."""
+        try:
+            pane = self.query_one("#current-text-pane", Static)
+            pane.update(text)
+        except Exception:
+            pass
+
+    def _show_spinner(self) -> None:
+        """Show the animated loading indicator."""
+        try:
+            self.query_one("#llm-spinner").add_class("active")
+        except Exception:
+            pass
+
+    def _hide_spinner(self) -> None:
+        """Hide the animated loading indicator."""
+        try:
+            self.query_one("#llm-spinner").remove_class("active")
+        except Exception:
+            pass
 
     def _refresh_preview(self) -> None:
         """Update the preview pane with current form values."""

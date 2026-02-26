@@ -143,6 +143,25 @@ Switch {
     margin-bottom: 1;
 }
 
+/* ── Tabbed content ──────────────────────────────── */
+#right-tabs {
+    height: 1fr;
+}
+
+/* ── Current text pane ───────────────────────────── */
+#current-text-pane {
+    height: 1fr;
+    border: round $primary-darken-1;
+    padding: 1;
+    overflow-y: auto;
+}
+
+#current-title {
+    text-style: bold;
+    color: $text;
+    margin-bottom: 1;
+}
+
 /* ── Output pane ──────────────────────────────────── */
 #output-container {
     dock: bottom;
@@ -185,6 +204,17 @@ Switch {
 }
 
 #spinner-overlay.visible {
+    display: block;
+}
+
+/* ── LLM loading spinner ─────────────────────────── */
+#llm-spinner {
+    height: 3;
+    display: none;
+    color: $primary;
+}
+
+#llm-spinner.active {
     display: block;
 }
 
