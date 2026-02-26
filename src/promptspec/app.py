@@ -118,6 +118,25 @@ def create_parser() -> argparse.ArgumentParser:
         help="Launch an interactive TUI (requires promptspec[ui])",
     )
 
+    # Discovery
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        help="Launch spec discovery chat — find the right spec interactively",
+    )
+    parser.add_argument(
+        "--specs-dir",
+        action="append",
+        type=Path,
+        metavar="DIR",
+        help="Additional spec directory to search (repeatable)",
+    )
+    parser.add_argument(
+        "--env",
+        action="store_true",
+        help="Print resolved configuration and environment, then exit",
+    )
+
     return parser
 
 
@@ -398,6 +417,149 @@ async def run_execute(
     return 0
 
 
+async def run_discover(args: argparse.Namespace) -> int:
+    """Run the spec discovery chat mode."""
+    from promptspec.discovery.catalog import scan_directories
+    from promptspec.discovery.chat_ui import DiscoveryChatUI
+    from promptspec.discovery.config import load_config, print_env
+    from promptspec.discovery.metadata import ensure_metadata
+    from promptspec.discovery.tools import (
+        DISCOVERY_TOOLS,
+        SpecSelected,
+        create_tool_executor,
+    )
+    from promptspec.engines.chat import ChatEngine
+
+    ui = DiscoveryChatUI()
+
+    # 1. Load config
+    ui.show_step("⚙️ ", "Loading configuration…")
+    env_config = load_config(
+        project_dir=Path.cwd(),
+        extra_specs_dirs=getattr(args, "specs_dir", None),
+    )
+    dirs = env_config.effective_specs_dirs(Path.cwd())
+    if env_config._global_path:
+        ui.show_step("  ", f"[dim]Global:  {env_config._global_path}[/dim]")
+    if env_config._project_path:
+        ui.show_step("  ", f"[dim]Project: {env_config._project_path}[/dim]")
+
+    # 2. Scan directories
+    ui.show_step("📂", "Scanning spec directories…")
+    entries = scan_directories(dirs)
+    ui.show_scan_progress(entries, dirs)
+
+    if not entries:
+        ui.show_error("No specs found. Add specs to ./specs/ or configure specs_dirs.")
+        return 1
+
+    # 3. Compute/load metadata
+    ui.show_step("🔍", "Loading metadata…")
+    cached_count = [0]
+    analyzed_count = [0]
+    progress = ui.show_metadata_progress_start(len(entries))
+
+    def on_progress(current: int, total: int, title: str) -> None:
+        analyzed_count[0] = current
+
+    metadata = await ensure_metadata(
+        entries,
+        model=args.model,
+        on_progress=on_progress,
+    )
+    cached_count[0] = len(entries) - analyzed_count[0]
+    ui.show_cache_summary(cached_count[0], analyzed_count[0], len(entries))
+
+    # 4. Load the discovery system prompt
+    discovery_spec = Path(__file__).parent.parent / "promptspec" / "specs" / "spec-discovery.promptspec.md"
+    # Try multiple locations
+    for candidate in [
+        Path.cwd() / "specs" / "spec-discovery.promptspec.md",
+        Path(__file__).resolve().parent / ".." / ".." / "specs" / "spec-discovery.promptspec.md",
+    ]:
+        if candidate.is_file():
+            discovery_spec = candidate
+            break
+
+    if discovery_spec.is_file():
+        # Strip the @note and @tool blocks — use the text as system prompt
+        raw = discovery_spec.read_text(encoding="utf-8")
+        # Remove @note blocks and @tool blocks (they're handled by the tools system)
+        lines = []
+        in_note = False
+        in_tool = False
+        for line in raw.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("@note"):
+                in_note = True
+                continue
+            if stripped.startswith("@tool"):
+                in_tool = True
+                continue
+            if in_note and (not stripped or stripped.startswith("@") or not line.startswith(" ")):
+                in_note = False
+            if in_tool and (stripped.startswith("@") and not stripped.startswith("@tool") and not line.startswith(" ")):
+                in_tool = False
+            if in_note or in_tool:
+                continue
+            # Skip lines starting with "## Tools" header
+            if stripped == "## Tools":
+                in_tool = True
+                continue
+            lines.append(line)
+        system_prompt = "\n".join(lines).strip()
+    else:
+        system_prompt = (
+            "You are PromptSpec Discovery — a friendly assistant that helps users "
+            "find the right prompt specification. Use search_catalog to find specs, "
+            "read_spec to examine them, and select_spec when the user is ready."
+        )
+
+    # 5. Build the chat engine
+    tool_executor = create_tool_executor(entries, metadata)
+
+    ui.show_ready()
+    ui.show_banner()
+
+    engine = ChatEngine(
+        system_prompt=system_prompt,
+        tools=DISCOVERY_TOOLS,
+        tool_executor=tool_executor,
+        ui=ui,
+        model=args.model,
+    )
+
+    # 6. Run the chat loop
+    try:
+        await engine.run()
+    except SpecSelected as sel:
+        # Hand off to TUI
+        spec_path = Path(sel.spec_path)
+        if spec_path.is_file():
+            # Find the matching entry for a nice display
+            matching = [e for e in entries if str(e.path) == sel.spec_path]
+            if matching:
+                meta = metadata.get(str(matching[0].path))
+                ui.show_selected(matching[0], meta)
+            try:
+                from promptspec.tui.app import launch_tui
+                launch_tui(spec_path=spec_path)
+            except ImportError:
+                ui.show_error(
+                    "Textual is required for the TUI. "
+                    "Install with: pip install promptspec[ui]"
+                )
+                return 1
+        else:
+            ui.show_error(f"Spec file not found: {spec_path}")
+            return 1
+    except KeyboardInterrupt:
+        pass
+
+    ui.show_goodbye()
+    return 0
+
+
 # ------------------------------------------------------------------
 # Entry point
 # ------------------------------------------------------------------
@@ -412,6 +574,25 @@ def cli() -> None:
         icon="🧩",
         verbose=args.verbose,
     )
+
+    # --env: print environment and exit
+    if getattr(args, "env", False):
+        from promptspec.discovery.config import load_config, print_env
+        config = load_config(
+            project_dir=Path.cwd(),
+            extra_specs_dirs=getattr(args, "specs_dir", None),
+        )
+        printer.console.print(print_env(config))
+        sys.exit(0)
+
+    # --discover: launch spec discovery chat
+    if getattr(args, "discover", False):
+        try:
+            exit_code = asyncio.run(run_discover(args))
+        except KeyboardInterrupt:
+            printer.console.print("\n[dim]Interrupted. 👋[/]")
+            exit_code = 130
+        sys.exit(exit_code)
 
     # Read spec
     if args.stdin:
