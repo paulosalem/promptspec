@@ -50,6 +50,7 @@ class PromptSpecApp(App):
         Binding("ctrl+c", "quit", "Quit", show=True),
         Binding("ctrl+r", "run_spec", "Run", show=True),
         Binding("ctrl+p", "compose_spec", "Compose", show=True),
+        Binding("ctrl+l", "toggle_left_panel", "Toggle Inputs", show=True),
     ]
 
     def __init__(
@@ -149,6 +150,11 @@ class PromptSpecApp(App):
         """Compose and execute the spec."""
         self.run_worker(self._do_run(), exclusive=True, thread=False)
 
+    def action_toggle_left_panel(self) -> None:
+        """Show or hide the left input panel (Ctrl+L)."""
+        panel = self.query_one("#left-panel")
+        panel.display = not panel.display
+
     async def _do_compose(self) -> None:
         """Compose the spec using the controller."""
         log = self.query_one("#step-log", StepLog)
@@ -219,6 +225,8 @@ class PromptSpecApp(App):
                     self, done_signal=done_signal,
                 )
                 log.add_info("Collaborative mode — edit in the pop-up editor")
+                # Hide left panel to give full width to collaboration
+                self.query_one("#left-panel").display = False
 
             # Execute with step callback
             def on_step(step):
