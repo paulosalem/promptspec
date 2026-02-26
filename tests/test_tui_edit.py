@@ -88,13 +88,14 @@ class TestEditScreenMounting:
             await pilot.press("escape")
 
     @pytest.mark.asyncio
-    async def test_four_buttons_present(self):
+    async def test_five_buttons_present(self):
         app = _EditApp()
         async with app.run_test(size=(100, 40)) as pilot:
             await pilot.pause()
             s = app.screen
             assert s.query_one("#btn-approve", Button)
             assert s.query_one("#btn-submit", Button)
+            assert s.query_one("#btn-toggle-msg", Button)
             assert s.query_one("#btn-done", Button)
             assert s.query_one("#btn-abort", Button)
             await pilot.press("escape")
@@ -326,3 +327,129 @@ class TestEditScreenLayout:
         assert app.edit_result is not None
         assert app.edit_result.text == multiline
         assert app.edit_result.action == "submit"
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Tests: Message input bar
+# ═══════════════════════════════════════════════════════════════════
+
+class TestEditScreenMessage:
+    """Tests for the optional user message input bar."""
+
+    @pytest.mark.asyncio
+    async def test_msg_bar_hidden_by_default(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            bar = app.screen.query_one("#msg-bar")
+            assert bar.has_class("hidden")
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_toggle_shows_msg_bar(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            bar = app.screen.query_one("#msg-bar")
+            assert bar.has_class("hidden")
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            assert not bar.has_class("hidden")
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_toggle_hides_msg_bar_again(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            bar = app.screen.query_one("#msg-bar")
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            assert not bar.has_class("hidden")
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            assert bar.has_class("hidden")
+            await pilot.press("escape")
+
+    @pytest.mark.asyncio
+    async def test_submit_includes_message(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            app.screen.query_one("#msg-input").value = "Please make it more formal"
+            await pilot.pause()
+            app.screen.query_one("#btn-submit", Button).press()
+            await pilot.pause()
+        assert app.edit_result is not None
+        assert app.edit_result.message == "Please make it more formal"
+
+    @pytest.mark.asyncio
+    async def test_approve_includes_message(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            app.screen.query_one("#msg-input").value = "Looks good!"
+            await pilot.pause()
+            app.screen.query_one("#btn-approve", Button).press()
+            await pilot.pause()
+        assert app.edit_result is not None
+        assert app.edit_result.message == "Looks good!"
+        assert app.edit_result.action == "approve"
+
+    @pytest.mark.asyncio
+    async def test_no_message_when_hidden(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            app.screen.query_one("#btn-submit", Button).press()
+            await pilot.pause()
+        assert app.edit_result is not None
+        assert app.edit_result.message == ""
+
+    @pytest.mark.asyncio
+    async def test_abort_has_no_message(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            app.screen.query_one("#msg-input").value = "Some msg"
+            await pilot.pause()
+            app.screen.query_one("#btn-abort", Button).press()
+            await pilot.pause()
+        assert app.edit_result is not None
+        assert app.edit_result.action == "abort"
+        assert app.edit_result.message == ""
+
+    @pytest.mark.asyncio
+    async def test_done_includes_message(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            app.screen.query_one("#btn-toggle-msg", Button).press()
+            await pilot.pause()
+            app.screen.query_one("#msg-input").value = "Wrap it up"
+            await pilot.pause()
+            app.screen.query_one("#btn-done", Button).press()
+            await pilot.pause()
+        assert app.edit_result is not None
+        assert app.edit_result.action == "done"
+        assert app.edit_result.message == "Wrap it up"
+
+    @pytest.mark.asyncio
+    async def test_message_default_field(self):
+        r = EditResult(text="hello", action="submit")
+        assert r.message == ""
+
+    @pytest.mark.asyncio
+    async def test_msg_input_has_placeholder(self):
+        app = _EditApp()
+        async with app.run_test(size=(100, 40)) as pilot:
+            await pilot.pause()
+            inp = app.screen.query_one("#msg-input")
+            assert inp.placeholder != ""
+            await pilot.press("escape")

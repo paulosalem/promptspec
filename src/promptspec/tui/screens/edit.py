@@ -12,14 +12,14 @@ click-to-position), edit it, then choose an action:
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import Button, Static, TextArea
+from textual.widgets import Button, Input, Static, TextArea
 
 
 @dataclass
@@ -28,6 +28,7 @@ class EditResult:
 
     text: str
     action: str  # "approve", "submit", "done", "abort"
+    message: str = ""  # optional instruction to the LLM
 
 
 class EditScreen(ModalScreen[EditResult]):
@@ -105,11 +106,37 @@ class EditScreen(ModalScreen[EditResult]):
         text-align: center;
         margin-top: 1;
     }
+
+    #msg-bar {
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    #msg-bar.hidden {
+        display: none;
+    }
+
+    #msg-input {
+        height: 3;
+        margin-top: 0;
+    }
+
+    #msg-label {
+        height: 1;
+        color: $text-muted;
+        text-style: italic;
+    }
+
+    #btn-toggle-msg {
+        min-width: 28;
+        margin: 0 1;
+    }
     """
 
     BINDINGS = [
         Binding("escape", "approve", "Approve (no changes)", show=True),
         Binding("ctrl+s", "submit", "Submit edit", show=True),
+        Binding("ctrl+m", "toggle_message", "Message to AI", show=True),
     ]
 
     def __init__(
@@ -141,6 +168,13 @@ class EditScreen(ModalScreen[EditResult]):
 
             yield TextArea(self._content, id="edit-area")
 
+            with Vertical(id="msg-bar", classes="hidden"):
+                yield Static("💬 Message to AI:", id="msg-label", markup=True)
+                yield Input(
+                    placeholder="Tell the AI what to do with your edits…",
+                    id="msg-input",
+                )
+
             yield Static(
                 "[dim]Escape = Approve unchanged  •  Ctrl+S = Submit edit[/dim]",
                 id="edit-hints",
@@ -150,6 +184,7 @@ class EditScreen(ModalScreen[EditResult]):
             with Horizontal(id="edit-buttons"):
                 yield Button("✓ Approve", id="btn-approve", variant="success")
                 yield Button("✏ Submit Edit", id="btn-submit", variant="primary")
+                yield Button("💬 Message", id="btn-toggle-msg", variant="default")
                 yield Button("🏁 Done", id="btn-done", variant="warning")
                 yield Button("✗ Abort", id="btn-abort", variant="error")
 
@@ -164,6 +199,8 @@ class EditScreen(ModalScreen[EditResult]):
             self.action_approve()
         elif event.button.id == "btn-submit":
             self.action_submit()
+        elif event.button.id == "btn-toggle-msg":
+            self.action_toggle_message()
         elif event.button.id == "btn-done":
             self._finish_done()
         elif event.button.id == "btn-abort":
@@ -171,14 +208,28 @@ class EditScreen(ModalScreen[EditResult]):
 
     # ── Actions ───────────────────────────────────────────────────
 
+    def _get_user_message(self) -> str:
+        """Get the optional user message, or empty string."""
+        try:
+            return self.query_one("#msg-input", Input).value.strip()
+        except Exception:
+            return ""
+
+    def action_toggle_message(self) -> None:
+        """Show or hide the message-to-AI input."""
+        bar = self.query_one("#msg-bar")
+        bar.toggle_class("hidden")
+        if not bar.has_class("hidden"):
+            self.query_one("#msg-input", Input).focus()
+
     def action_approve(self) -> None:
         """Return the original content unchanged."""
-        self.dismiss(EditResult(text=self._content, action="approve"))
+        self.dismiss(EditResult(text=self._content, action="approve", message=self._get_user_message()))
 
     def action_submit(self) -> None:
         """Return the edited content."""
         area = self.query_one("#edit-area", TextArea)
-        self.dismiss(EditResult(text=area.text, action="submit"))
+        self.dismiss(EditResult(text=area.text, action="submit", message=self._get_user_message()))
 
     def _finish_done(self) -> None:
         """Signal that collaboration is complete."""
@@ -186,7 +237,7 @@ class EditScreen(ModalScreen[EditResult]):
         text = area.text
         if not text.rstrip().endswith(self._done_signal):
             text = text.rstrip() + f"\n{self._done_signal}"
-        self.dismiss(EditResult(text=text, action="done"))
+        self.dismiss(EditResult(text=text, action="done", message=self._get_user_message()))
 
     def _finish_abort(self) -> None:
         """Signal abort — return empty string."""

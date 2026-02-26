@@ -87,4 +87,10 @@ class TuiEditCallback:
         elif action == "abort":
             self._log("✗ Aborted")
 
-        return result.text
+        # Append user message as an instruction block if provided
+        text = result.text
+        if result.message:
+            self._log(f"💬 Message: {result.message[:80]}")
+            text = text.rstrip() + f"\n\n---\nUser instruction: {result.message}\n---"
+
+        return text
